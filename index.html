@@ -50,15 +50,12 @@
           <button onclick="openTripManagerModal()" class="w-10 h-10 bg-white rounded-2xl border border-slate-200/60 shadow-sm text-indigo-600 hover:bg-indigo-50 active:scale-95 transition flex items-center justify-center" title="Quản lý / Đổi chuyến đi">
             <i data-lucide="folder-kanban" class="w-4 h-4"></i>
           </button>
-          <button onclick="openSheetsModal()" class="w-10 h-10 bg-white rounded-2xl border border-slate-200/60 shadow-sm text-emerald-600 hover:bg-emerald-50 active:scale-95 transition flex items-center justify-center relative" title="Google Sheets Database">
+          <button onclick="openSheetsModal()" class="w-10 h-10 bg-white rounded-2xl border border-slate-200/60 shadow-sm text-emerald-600 hover:bg-emerald-50 active:scale-95 transition flex items-center justify-center relative" title="Đồng bộ Google Sheets">
             <i data-lucide="file-spreadsheet" class="w-4 h-4"></i>
             <span id="sheet-sync-dot" class="absolute top-2 right-2 w-2 h-2 rounded-full bg-slate-300"></span>
           </button>
           <button onclick="openShareModal()" class="w-10 h-10 bg-white rounded-2xl border border-slate-200/60 shadow-sm text-blue-600 hover:bg-blue-50 active:scale-95 transition flex items-center justify-center" title="Chia sẻ QR / JSON">
             <i data-lucide="qr-code" class="w-4 h-4"></i>
-          </button>
-          <button onclick="openSyncModal()" class="w-10 h-10 bg-white rounded-2xl border border-slate-200/60 shadow-sm text-slate-600 hover:text-blue-600 active:scale-95 transition flex items-center justify-center" title="Đồng bộ Đám mây">
-            <i data-lucide="cloud" class="w-4 h-4"></i>
           </button>
         </div>
       </div>
@@ -372,30 +369,38 @@
 
   <!-- MODAL GOOGLE SHEETS WEB APP SYNC -->
   <div id="sheets-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
-    <div class="max-w-sm w-full bg-white rounded-3xl p-5 space-y-4 shadow-2xl border border-slate-100">
+    <div class="max-w-sm w-full bg-white rounded-3xl p-5 space-y-4 shadow-2xl border border-slate-100 max-h-[85vh] overflow-y-auto">
       <div class="flex justify-between items-center border-b border-slate-100 pb-3">
         <h3 class="text-sm font-extrabold text-emerald-700 flex items-center gap-2">
-          <i data-lucide="file-spreadsheet" class="w-4 h-4"></i> Liên kết Google Sheets Web App
+          <i data-lucide="file-spreadsheet" class="w-4 h-4"></i> Đồng bộ Google Sheets
         </h3>
         <button onclick="closeSheetsModal()" class="p-1 text-slate-400 hover:text-slate-600"><i data-lucide="x" class="w-5 h-5"></i></button>
       </div>
 
       <div class="space-y-2">
         <p class="text-xs text-slate-500 font-medium leading-relaxed">
-          Dán URL Web App Google Apps Script của bạn vào đây. Link này sẽ được <b>lưu riêng cho trip hiện tại</b>.
+          Dán URL Web App Apps Script (backend) của bạn. Link này dùng chung cho <b>toàn bộ app</b> (mọi chuyến đi), lưu 1 lần trên máy này.
         </p>
-        <input type="text" id="sheet-url" placeholder="https://script.google.com/macros/s/.../exec" class="w-full bg-slate-50 border border-slate-200/80 rounded-2xl p-3 text-xs outline-none focus:bg-white focus:border-emerald-500 font-medium">
+        <input type="text" id="backend-url" placeholder="https://script.google.com/macros/s/.../exec" class="w-full bg-slate-50 border border-slate-200/80 rounded-2xl p-3 text-xs outline-none focus:bg-white focus:border-emerald-500 font-medium">
+        <button onclick="saveBackendUrlOnly()" class="w-full bg-slate-100 hover:bg-slate-200 text-slate-800 py-2.5 rounded-2xl font-bold text-xs transition">Lưu link backend</button>
+      </div>
+
+      <div class="grid grid-cols-2 gap-2 pt-1">
+        <button onclick="pullFromSheets()" class="bg-slate-900 hover:bg-black text-white py-3 rounded-2xl font-bold text-xs shadow-sm transition flex items-center justify-center gap-1.5">
+          <i data-lucide="download-cloud" class="w-4 h-4"></i> Tải về
+        </button>
+        <button onclick="pushToSheets()" class="bg-emerald-600 hover:bg-emerald-700 text-white py-3 rounded-2xl font-bold text-xs shadow-md shadow-emerald-600/20 transition flex items-center justify-center gap-1.5">
+          <i data-lucide="upload-cloud" class="w-4 h-4"></i> Đẩy lên
+        </button>
       </div>
 
       <div class="bg-emerald-50/60 p-3 rounded-2xl border border-emerald-100 text-[11px] text-emerald-800 space-y-1">
-        <p class="font-bold">Cấu trúc JSON trả về từ Google Apps Script:</p>
-        <p class="font-mono text-[10px]">[ { day, time, title, location, note, category, priority } ]</p>
+        <p class="font-bold">Lưu ý:</p>
+        <p>• <b>Đẩy lên</b>: ghi toàn bộ trips/hoạt động/tiện ích hiện tại lên Sheets (ghi đè).</p>
+        <p>• <b>Tải về</b>: lấy dữ liệu mới nhất từ Sheets về máy này (ghi đè dữ liệu local).</p>
+        <p>• Ảnh/PDF giấy tờ được tự động tải lên Google Drive khi bạn upload — không cần đẩy riêng.</p>
       </div>
-
-      <div class="grid grid-cols-2 gap-2">
-        <button onclick="saveSheetUrlOnly()" class="bg-slate-100 hover:bg-slate-200 text-slate-800 py-3 rounded-2xl font-bold text-xs transition">Lưu link</button>
-        <button onclick="syncFromGoogleSheets()" class="bg-emerald-600 hover:bg-emerald-700 text-white py-3 rounded-2xl font-bold text-xs shadow-md shadow-emerald-600/20 transition">Đồng bộ dữ liệu</button>
-      </div>
+      <p id="sync-status-text" class="text-[10px] text-slate-400 font-semibold text-center"></p>
     </div>
   </div>
 
@@ -422,26 +427,11 @@
     </div>
   </div>
 
-  <!-- MODAL CLOUD SYNC -->
-  <div id="sync-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
-    <div class="max-w-sm w-full bg-white rounded-3xl p-5 space-y-4 shadow-2xl border border-slate-100">
-      <div class="flex justify-between items-center border-b border-slate-100 pb-3">
-        <h3 class="text-sm font-extrabold text-blue-700 flex items-center gap-2"><i data-lucide="cloud" class="w-4 h-4"></i> Đồng bộ Đám mây</h3>
-        <button onclick="closeSyncModal()" class="p-1 text-slate-400 hover:text-slate-600"><i data-lucide="x" class="w-5 h-5"></i></button>
-      </div>
-      <p class="text-xs text-slate-500 font-medium leading-relaxed">Nhập mã bất kỳ để sao lưu hoặc khôi phục dữ liệu.</p>
-      <input type="text" id="cloud-sync-code" placeholder="Mã ví dụ: chuyen-di-da-nang" class="w-full bg-slate-50 border border-slate-200/80 rounded-2xl p-3 text-xs outline-none focus:bg-white focus:border-blue-500 font-semibold">
-      <div class="grid grid-cols-2 gap-2">
-        <button onclick="pushToCloud()" class="bg-slate-100 hover:bg-slate-200 text-slate-800 py-3 rounded-2xl font-bold text-xs">Lưu lên Cloud</button>
-        <button onclick="pullFromCloud()" class="bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-2xl font-bold text-xs shadow-md shadow-blue-500/20">Tải về máy</button>
-      </div>
-    </div>
-  </div>
-
   <!-- JAVASCRIPT LOGIC -->
   <script>
     let appState = JSON.parse(localStorage.getItem('TRAVEL_PRO_APP_V12')) || {
       activeTripId: 1,
+      backendUrl: '',
       trips: [
         {
           id: 1,
@@ -451,8 +441,6 @@
           currentDay: 1,
           dayLocations: { 1: 'Da Nang', 2: 'Da Nang', 3: 'Hoi An', 4: 'Hue', 5: 'Hue' },
           priorityFilter: 'ALL',
-          sheetUrl: '',
-          syncCode: '',
           activities: [
             { id: 1, day: 1, time: '08:00', title: 'Bay đến Đà Nẵng', location: 'Sân bay Đà Nẵng', note: 'VN123', category: 'TRANSPORT', priority: 'MUST', status: 'PENDING' },
             { id: 2, day: 3, time: '14:00', title: 'Check-in Hội An', location: 'Phố cổ Hội An', note: 'Tham quan đèn lồng', category: 'ACTIVITY', priority: 'MUST', status: 'PENDING' }
@@ -462,6 +450,8 @@
         }
       ]
     };
+
+    if (appState.backendUrl === undefined) appState.backendUrl = '';
 
     function getCurrentTrip() {
       let trip = appState.trips.find(t => t.id === appState.activeTripId);
@@ -545,8 +535,6 @@
         currentDay: 1,
         dayLocations: dayLocations,
         priorityFilter: 'ALL',
-        sheetUrl: '',
-        syncCode: '',
         activities: [],
         documents: [],
         utilities: []
@@ -826,36 +814,71 @@
       } catch(e) { alert('Lỗi định dạng JSON!'); }
     }
 
-    /* DOCUMENTS */
+    /* DOCUMENTS — ảnh/PDF được tải lên Google Drive qua Apps Script backend
+       để đối tác cũng thấy được khi Đồng bộ (localStorage chỉ có trên máy này). */
     function uploadDocument(event) {
       const trip = getCurrentTrip();
       const file = event.target.files[0];
       if (!file) return;
       const customName = document.getElementById('doc-custom-name').value.trim();
+      const docName = customName || file.name;
       const reader = new FileReader();
-      reader.onload = function(e) {
-        trip.documents.push({ id: Date.now(), name: customName || file.name, type: file.type, data: e.target.result });
+      reader.onload = async function(e) {
+        const base64 = e.target.result;
         document.getElementById('doc-custom-name').value = '';
+
+        if (appState.backendUrl) {
+          try {
+            const res = await fetch(appState.backendUrl, {
+              method: 'POST',
+              body: JSON.stringify({ action: 'uploadFile', base64: base64, mimeType: file.type, fileName: docName })
+            });
+            const result = await res.json();
+            if (result.success) {
+              trip.documents.push({ id: Date.now(), name: docName, type: file.type, driveUrl: result.driveUrl, driveFileId: result.driveFileId });
+              saveState();
+              return;
+            }
+            alert('Tải lên Google Drive lỗi: ' + (result.error || 'không rõ') + '. File sẽ chỉ lưu trên máy này (đối tác sẽ không thấy).');
+          } catch (err) {
+            alert('Không kết nối được backend. File sẽ chỉ lưu trên máy này (đối tác sẽ không thấy).');
+          }
+        } else {
+          alert('Chưa cấu hình backend Google Sheets nên file chỉ lưu trên máy này — đối tác sẽ không thấy. Vào nút 🗂️ để cấu hình.');
+        }
+        // Fallback: lưu local nếu chưa cấu hình backend hoặc upload Drive thất bại
+        trip.documents.push({ id: Date.now(), name: docName, type: file.type, data: base64 });
         saveState();
       };
       reader.readAsDataURL(file);
     }
 
-    function deleteDocument(id) { 
+    async function deleteDocument(id) {
       const trip = getCurrentTrip();
-      trip.documents = trip.documents.filter(d => d.id !== id); 
-      saveState(); 
+      const doc = trip.documents.find(d => d.id === id);
+      trip.documents = trip.documents.filter(d => d.id !== id);
+      saveState();
+      if (doc && doc.driveFileId && appState.backendUrl) {
+        try {
+          await fetch(appState.backendUrl, {
+            method: 'POST',
+            body: JSON.stringify({ action: 'deleteFile', driveFileId: doc.driveFileId })
+          });
+        } catch (err) { /* xoá local vẫn đã thành công, bỏ qua lỗi xoá trên Drive */ }
+      }
     }
     function openDocModal(id) {
       const trip = getCurrentTrip();
       const doc = trip.documents.find(d => d.id === id);
       if (!doc) return;
+      const src = doc.driveUrl || doc.data;
       document.getElementById('doc-modal-title').innerText = doc.name;
       const downloadBtn = document.getElementById('doc-download-btn');
-      downloadBtn.href = doc.data;
+      downloadBtn.href = src;
       downloadBtn.download = doc.name;
+      downloadBtn.target = doc.driveUrl ? '_blank' : '_self';
       const container = document.getElementById('doc-modal-content');
-      container.innerHTML = doc.type.startsWith('image/') ? `<img src="${doc.data}" class="max-w-full max-h-[75vh] object-contain rounded-2xl shadow-xl">` : `<iframe src="${doc.data}" class="w-full h-[75vh] bg-white rounded-2xl"></iframe>`;
+      container.innerHTML = doc.type.startsWith('image/') ? `<img src="${src}" class="max-w-full max-h-[75vh] object-contain rounded-2xl shadow-xl">` : `<iframe src="${src}" class="w-full h-[75vh] bg-white rounded-2xl"></iframe>`;
       document.getElementById('view-doc-modal').classList.remove('hidden');
     }
     function closeDocModal() { document.getElementById('view-doc-modal').classList.add('hidden'); }
@@ -886,90 +909,98 @@
       });
     }
 
-    /* GOOGLE SHEETS WEB APP SYNC LINK (GẮN RIÊNG CHO MỖI TRIP) */
-    function openSheetsModal() { 
-      const trip = getCurrentTrip();
-      document.getElementById('sheet-url').value = trip.sheetUrl || ''; 
-      document.getElementById('sheets-modal').classList.remove('hidden'); 
+    /* GOOGLE SHEETS + APPS SCRIPT + DRIVE SYNC (DÙNG CHUNG CHO TOÀN BỘ APP) */
+    function openSheetsModal() {
+      document.getElementById('backend-url').value = appState.backendUrl || '';
+      setSyncStatus(appState.backendUrl ? 'Backend đã cấu hình.' : 'Chưa cấu hình backend.');
+      document.getElementById('sheets-modal').classList.remove('hidden');
+      updateSyncDot();
     }
     function closeSheetsModal() { document.getElementById('sheets-modal').classList.add('hidden'); }
-    
-    function saveSheetUrlOnly() {
-      const trip = getCurrentTrip();
-      const url = document.getElementById('sheet-url').value.trim();
-      trip.sheetUrl = url;
-      saveState();
-      closeSheetsModal();
-      alert('Đã lưu Link Google Sheets Web App cho trip này!');
+
+    function setSyncStatus(msg) {
+      const el = document.getElementById('sync-status-text');
+      if (el) el.innerText = msg || '';
     }
 
-    async function syncFromGoogleSheets() {
-      const trip = getCurrentTrip();
-      const url = document.getElementById('sheet-url').value.trim();
-      if (!url) return alert('Vui lòng nhập URL Web App từ Google Apps Script!');
-      
-      try {
-        const res = await fetch(url);
-        const data = await res.json();
-        
-        if (!Array.isArray(data) || data.length === 0) {
-          return alert('Dữ liệu trả về từ Google Sheets không hợp lệ hoặc rỗng!');
-        }
-        
-        const newActs = data.map((item, index) => ({
-          id: Date.now() + index,
-          day: Number(item.day) || 1,
-          time: item.time || '09:00',
-          title: item.title || 'Địa điểm',
-          location: item.location || '',
-          note: item.note || '',
-          category: (item.category || 'ACTIVITY').toUpperCase(),
-          priority: (item.priority || 'MUST').toUpperCase() === 'BACKUP' ? 'BACKUP' : 'MUST',
-          status: 'PENDING'
-        }));
+    function updateSyncDot() {
+      const dot = document.getElementById('sheet-sync-dot');
+      if (!dot) return;
+      dot.className = 'absolute top-2 right-2 w-2 h-2 rounded-full ' + (appState.backendUrl ? 'bg-emerald-500' : 'bg-slate-300');
+    }
 
-        trip.activities = newActs;
-        trip.sheetUrl = url;
-        closeSheetsModal();
-        saveState();
-        alert('Đồng bộ database từ Google Sheets Web App thành công!');
-      } catch (err) { 
-        alert('Lỗi tải dữ liệu! Hãy đảm bảo Web App được cấp quyền truy cập dạng "Anyone" và trả về JSON.'); 
+    function saveBackendUrlOnly() {
+      const url = document.getElementById('backend-url').value.trim();
+      appState.backendUrl = url;
+      saveState();
+      updateSyncDot();
+      setSyncStatus(url ? 'Đã lưu link backend.' : 'Đã xoá link backend.');
+    }
+
+    // Loại bỏ dữ liệu base64 cũ (nếu còn) khỏi documents trước khi đẩy lên Sheets,
+    // vì ảnh/PDF giờ được lưu trên Google Drive (chỉ giữ lại driveUrl, rất nhẹ).
+    function sanitizeTripsForPush(trips) {
+      return trips.map(t => ({
+        ...t,
+        documents: (t.documents || []).map(d => ({
+          id: d.id, name: d.name, type: d.type, driveUrl: d.driveUrl || null, driveFileId: d.driveFileId || null
+        }))
+      }));
+    }
+
+    async function pushToSheets() {
+      const url = (document.getElementById('backend-url').value || appState.backendUrl || '').trim();
+      if (!url) return alert('Vui lòng nhập URL Web App Apps Script!');
+      appState.backendUrl = url;
+      saveState();
+      setSyncStatus('Đang đẩy dữ liệu lên Sheets...');
+      try {
+        const payload = { trips: sanitizeTripsForPush(appState.trips) };
+        const res = await fetch(url, {
+          method: 'POST',
+          body: JSON.stringify({ action: 'push', data: payload })
+        });
+        const result = await res.json();
+        if (result.success) {
+          setSyncStatus('Đẩy dữ liệu thành công lúc ' + new Date().toLocaleTimeString('vi-VN'));
+          alert('Đã đẩy dữ liệu lên Google Sheets thành công!');
+        } else {
+          setSyncStatus('Lỗi: ' + (result.error || 'không rõ'));
+          alert('Đẩy dữ liệu thất bại: ' + (result.error || 'Lỗi không xác định'));
+        }
+      } catch (err) {
+        setSyncStatus('Lỗi kết nối backend.');
+        alert('Không kết nối được backend. Kiểm tra lại URL và quyền deploy (Anyone) của Apps Script.');
       }
     }
 
-    function openSyncModal() { 
-      const trip = getCurrentTrip();
-      document.getElementById('cloud-sync-code').value = trip.syncCode || ''; 
-      document.getElementById('sync-modal').classList.remove('hidden'); 
-    }
-    function closeSyncModal() { document.getElementById('sync-modal').classList.add('hidden'); }
-    async function pushToCloud() {
-      const trip = getCurrentTrip();
-      const code = document.getElementById('cloud-sync-code').value.trim();
-      if (!code) return alert('Nhập mã!');
+    async function pullFromSheets() {
+      const url = (document.getElementById('backend-url').value || appState.backendUrl || '').trim();
+      if (!url) return alert('Vui lòng nhập URL Web App Apps Script!');
+      appState.backendUrl = url;
+      saveState();
+      setSyncStatus('Đang tải dữ liệu từ Sheets...');
       try {
-        const res = await fetch(`https://keyvalue.impathy.com/api/v1/key/${encodeURIComponent(code)}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'text/plain' },
-          body: JSON.stringify(appState)
-        });
-        if (res.ok) { trip.syncCode = code; saveState(); alert('Đã lưu!'); }
-      } catch (err) { alert('Lỗi kết nối!'); }
-    }
-    async function pullFromCloud() {
-      const code = document.getElementById('cloud-sync-code').value.trim();
-      if (!code) return alert('Nhập mã!');
-      try {
-        const res = await fetch(`https://keyvalue.impathy.com/api/v1/key/${encodeURIComponent(code)}`);
-        if (res.ok) {
-          appState = await res.json();
+        const res = await fetch(url + (url.includes('?') ? '&' : '?') + 'action=pull');
+        const result = await res.json();
+        if (result.success && result.data && Array.isArray(result.data.trips) && result.data.trips.length > 0) {
+          appState.trips = result.data.trips;
+          if (!appState.trips.find(t => t.id === appState.activeTripId)) {
+            appState.activeTripId = appState.trips[0].id;
+          }
           saveState();
-          closeSyncModal();
+          closeSheetsModal();
           fetchWeatherForCurrentDay();
-          alert('Tải thành công!');
+          setSyncStatus('Tải dữ liệu thành công.');
+          alert('Đã tải dữ liệu mới nhất từ Google Sheets!');
+        } else {
+          setSyncStatus('Chưa có dữ liệu trên Sheets.');
+          alert('Chưa có dữ liệu nào trên Google Sheets. Hãy "Đẩy lên" trước.');
         }
-      } catch (err) { alert('Không tìm thấy dữ liệu!'); }
+      } catch (err) {
+        setSyncStatus('Lỗi kết nối backend.');
+        alert('Không kết nối được backend. Kiểm tra lại URL và quyền deploy (Anyone) của Apps Script.');
+      }
     }
 
     function formatDate(dateStr) {
@@ -997,12 +1028,7 @@
       document.getElementById('current-day-num-label').innerText = trip.currentDay;
 
       // Cập nhật chấm báo trạng thái Google Sheets trên Header
-      const dot = document.getElementById('sheet-sync-dot');
-      if (trip.sheetUrl && trip.sheetUrl.trim() !== '') {
-        dot.className = 'absolute top-2 right-2 w-2 h-2 rounded-full bg-emerald-500 shadow-sm shadow-emerald-500';
-      } else {
-        dot.className = 'absolute top-2 right-2 w-2 h-2 rounded-full bg-slate-300';
-      }
+      updateSyncDot();
 
       // Day Selector
       const dayContainer = document.getElementById('day-selector');
@@ -1108,10 +1134,12 @@
       } else {
         trip.documents.forEach(doc => {
           const isImg = doc.type.startsWith('image/');
+          const src = doc.driveUrl || doc.data;
           docGrid.innerHTML += `
             <div class="bg-white rounded-3xl p-3.5 border border-slate-200/60 shadow-sm space-y-2.5 flex flex-col justify-between">
-              <div class="aspect-video bg-slate-100 rounded-2xl overflow-hidden flex items-center justify-center border border-slate-100 cursor-pointer" onclick="openDocModal(${doc.id})">
-                ${isImg ? `<img src="${doc.data}" class="w-full h-full object-cover">` : `<i data-lucide="file-text" class="w-8 h-8 text-blue-600"></i>`}
+              <div class="aspect-video bg-slate-100 rounded-2xl overflow-hidden flex items-center justify-center border border-slate-100 cursor-pointer relative" onclick="openDocModal(${doc.id})">
+                ${isImg ? `<img src="${src}" class="w-full h-full object-cover">` : `<i data-lucide="file-text" class="w-8 h-8 text-blue-600"></i>`}
+                ${doc.driveUrl ? `<span class="absolute top-1.5 right-1.5 bg-emerald-500 text-white text-[8px] font-bold px-1.5 py-0.5 rounded-lg flex items-center gap-0.5"><i data-lucide="cloud" class="w-2.5 h-2.5"></i></span>` : ''}
               </div>
               <p class="text-xs font-extrabold text-slate-800 truncate" title="${doc.name}">${doc.name}</p>
               <div class="flex gap-1.5">
@@ -1157,6 +1185,7 @@
 
     render();
     fetchWeatherForCurrentDay();
+    updateSyncDot();
   </script>
 </body>
 </html>
