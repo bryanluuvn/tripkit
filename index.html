@@ -50,9 +50,12 @@
           <button onclick="openTripManagerModal()" class="w-10 h-10 bg-white rounded-2xl border border-slate-200/60 shadow-sm text-indigo-600 hover:bg-indigo-50 active:scale-95 transition flex items-center justify-center" title="Quản lý / Đổi chuyến đi">
             <i data-lucide="folder-kanban" class="w-4 h-4"></i>
           </button>
-          <button onclick="openSheetsModal()" class="w-10 h-10 bg-white rounded-2xl border border-slate-200/60 shadow-sm text-emerald-600 hover:bg-emerald-50 active:scale-95 transition flex items-center justify-center relative" title="Đồng bộ Google Sheets">
+          <button onclick="openGoogleSheet()" class="w-10 h-10 bg-white rounded-2xl border border-slate-200/60 shadow-sm text-emerald-600 hover:bg-emerald-50 active:scale-95 transition flex items-center justify-center relative" title="Mở Google Sheet">
             <i data-lucide="file-spreadsheet" class="w-4 h-4"></i>
             <span id="sheet-sync-dot" class="absolute top-2 right-2 w-2 h-2 rounded-full bg-slate-300"></span>
+          </button>
+          <button onclick="openSheetsModal()" class="w-7 h-10 bg-white rounded-2xl border border-slate-200/60 shadow-sm text-slate-500 hover:text-emerald-600 active:scale-95 transition flex items-center justify-center -ml-1.5" title="Cấu hình đồng bộ Sheets">
+            <i data-lucide="settings-2" class="w-3.5 h-3.5"></i>
           </button>
           <button onclick="openShareModal()" class="w-10 h-10 bg-white rounded-2xl border border-slate-200/60 shadow-sm text-blue-600 hover:bg-blue-50 active:scale-95 transition flex items-center justify-center" title="Chia sẻ QR / JSON">
             <i data-lucide="qr-code" class="w-4 h-4"></i>
@@ -395,11 +398,12 @@
       </div>
 
       <div class="bg-emerald-50/60 p-3 rounded-2xl border border-emerald-100 text-[11px] text-emerald-800 space-y-1">
-        <p class="font-bold">App tự động đồng bộ:</p>
-        <p>• Mọi thay đổi tự <b>đẩy lên Sheets</b> sau ~2 giây.</p>
-        <p>• App tự <b>tải dữ liệu mới</b> mỗi 30s và khi bạn mở lại app.</p>
-        <p>• 2 nút bên dưới dùng khi cần đồng bộ ngay lập tức, không cần đợi.</p>
-        <p>• Ảnh/PDF giấy tờ tự động tải lên Google Drive khi bạn upload.</p>
+        <p class="font-bold">Sheets giờ là bảng, sửa tay được:</p>
+        <p>• Sheet có 4 tab: <b>Trips, Activities, Documents, Utilities</b> — thêm/sửa dòng trực tiếp trong Sheets đều được.</p>
+        <p>• Để trống cột "id" khi thêm dòng mới — app tự điền khi Tải về.</p>
+        <p>• Cột "tripId" ở 3 tab kia phải trùng "id" của 1 dòng trong tab Trips.</p>
+        <p>• Bấm icon 🗂️ ở header để mở thẳng Google Sheet thao tác.</p>
+        <p>• App tự đẩy lên sau ~2s có thay đổi, tự tải về mỗi 30s.</p>
       </div>
       <p id="sync-status-text" class="text-[10px] text-slate-400 font-semibold text-center"></p>
     </div>
@@ -437,6 +441,7 @@
     let appState = JSON.parse(localStorage.getItem('TRAVEL_PRO_APP_V12')) || {
       activeTripId: 1,
       backendUrl: DEFAULT_BACKEND_URL,
+      sheetViewUrl: '',
       trips: [
         {
           id: 1,
@@ -925,6 +930,32 @@
     }
 
     /* GOOGLE SHEETS + APPS SCRIPT + DRIVE SYNC (DÙNG CHUNG CHO TOÀN BỘ APP) */
+    function openGoogleSheet() {
+      if (appState.sheetViewUrl) {
+        window.open(appState.sheetViewUrl, '_blank');
+      } else if (appState.backendUrl) {
+        // Chưa lấy được link Sheet — thử lấy ngay rồi mở
+        fetchSheetMeta(appState.backendUrl).then(() => {
+          if (appState.sheetViewUrl) window.open(appState.sheetViewUrl, '_blank');
+          else openSheetsModal();
+        });
+      } else {
+        openSheetsModal();
+      }
+    }
+
+    async function fetchSheetMeta(url) {
+      if (!url) return;
+      try {
+        const res = await fetch(url + (url.includes('?') ? '&' : '?') + 'action=meta');
+        const result = await res.json();
+        if (result.success && result.sheetUrl) {
+          appState.sheetViewUrl = result.sheetUrl;
+          localStorage.setItem('TRAVEL_PRO_APP_V12', JSON.stringify(appState));
+        }
+      } catch (err) { /* im lặng bỏ qua, sẽ thử lại lần sau */ }
+    }
+
     function openSheetsModal() {
       document.getElementById('backend-url').value = appState.backendUrl || '';
       setSyncStatus(appState.backendUrl ? 'Backend đã cấu hình.' : 'Chưa cấu hình backend.');
@@ -954,6 +985,7 @@
       saveState();
       updateSyncDot();
       setSyncStatus(url ? 'Đã lưu link backend.' : 'Đã xoá link backend.');
+      if (url) fetchSheetMeta(url);
     }
 
     // Loại bỏ dữ liệu base64 cũ (nếu còn) khỏi documents trước khi đẩy lên Sheets,
@@ -1027,6 +1059,7 @@
       if (!url) return alert('Vui lòng nhập URL Web App Apps Script!');
       appState.backendUrl = url;
       localStorage.setItem('TRAVEL_PRO_APP_V12', JSON.stringify(appState));
+      if (!appState.sheetViewUrl) fetchSheetMeta(url);
       const result = await doPush(url, { silent: false });
       if (result.success) {
         alert('Đã đẩy dữ liệu lên Google Sheets thành công!');
@@ -1251,6 +1284,7 @@
     updateSyncDot();
     if (appState.backendUrl) {
       doPull(appState.backendUrl, { silent: true });
+      if (!appState.sheetViewUrl) fetchSheetMeta(appState.backendUrl);
     }
   </script>
 </body>
