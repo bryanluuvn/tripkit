@@ -395,10 +395,11 @@
       </div>
 
       <div class="bg-emerald-50/60 p-3 rounded-2xl border border-emerald-100 text-[11px] text-emerald-800 space-y-1">
-        <p class="font-bold">Lưu ý:</p>
-        <p>• <b>Đẩy lên</b>: ghi toàn bộ trips/hoạt động/tiện ích hiện tại lên Sheets (ghi đè).</p>
-        <p>• <b>Tải về</b>: lấy dữ liệu mới nhất từ Sheets về máy này (ghi đè dữ liệu local).</p>
-        <p>• Ảnh/PDF giấy tờ được tự động tải lên Google Drive khi bạn upload — không cần đẩy riêng.</p>
+        <p class="font-bold">App tự động đồng bộ:</p>
+        <p>• Mọi thay đổi tự <b>đẩy lên Sheets</b> sau ~2 giây.</p>
+        <p>• App tự <b>tải dữ liệu mới</b> mỗi 30s và khi bạn mở lại app.</p>
+        <p>• 2 nút bên dưới dùng khi cần đồng bộ ngay lập tức, không cần đợi.</p>
+        <p>• Ảnh/PDF giấy tờ tự động tải lên Google Drive khi bạn upload.</p>
       </div>
       <p id="sync-status-text" class="text-[10px] text-slate-400 font-semibold text-center"></p>
     </div>
@@ -429,9 +430,13 @@
 
   <!-- JAVASCRIPT LOGIC -->
   <script>
+    // URL Web App Apps Script mặc định — đã gắn sẵn, không cần nhập tay trong app nữa.
+    // Muốn đổi sau này, chỉ cần sửa giá trị này trong file HTML.
+    const DEFAULT_BACKEND_URL = 'https://script.google.com/macros/s/AKfycbzgqT4vD5dUWm0o_MBUl6ERmNp_eOxC-5uvLJzr4nC0kfoy6rIj70hOIFe24zlhUi4/exec';
+
     let appState = JSON.parse(localStorage.getItem('TRAVEL_PRO_APP_V12')) || {
       activeTripId: 1,
-      backendUrl: '',
+      backendUrl: DEFAULT_BACKEND_URL,
       trips: [
         {
           id: 1,
@@ -451,7 +456,7 @@
       ]
     };
 
-    if (appState.backendUrl === undefined) appState.backendUrl = '';
+    if (!appState.backendUrl) appState.backendUrl = DEFAULT_BACKEND_URL;
 
     function getCurrentTrip() {
       let trip = appState.trips.find(t => t.id === appState.activeTripId);
@@ -462,9 +467,19 @@
       return trip;
     }
 
+    let autoPushTimer = null;
+    let isApplyingRemoteData = false;
+
     function saveState() {
       localStorage.setItem('TRAVEL_PRO_APP_V12', JSON.stringify(appState));
       render();
+      scheduleAutoPush();
+    }
+
+    function scheduleAutoPush() {
+      if (!appState.backendUrl || isApplyingRemoteData) return;
+      clearTimeout(autoPushTimer);
+      autoPushTimer = setTimeout(() => { doPush(appState.backendUrl, { silent: true }); }, 2000);
     }
 
     /* TRIP MANAGEMENT LOGIC */
@@ -923,10 +938,14 @@
       if (el) el.innerText = msg || '';
     }
 
-    function updateSyncDot() {
+    function updateSyncDot(success) {
       const dot = document.getElementById('sheet-sync-dot');
       if (!dot) return;
-      dot.className = 'absolute top-2 right-2 w-2 h-2 rounded-full ' + (appState.backendUrl ? 'bg-emerald-500' : 'bg-slate-300');
+      let color = 'bg-slate-300'; // chưa cấu hình
+      if (appState.backendUrl) {
+        color = success === false ? 'bg-rose-500' : 'bg-emerald-500';
+      }
+      dot.className = 'absolute top-2 right-2 w-2 h-2 rounded-full ' + color;
     }
 
     function saveBackendUrlOnly() {
@@ -948,12 +967,10 @@
       }));
     }
 
-    async function pushToSheets() {
-      const url = (document.getElementById('backend-url').value || appState.backendUrl || '').trim();
-      if (!url) return alert('Vui lòng nhập URL Web App Apps Script!');
-      appState.backendUrl = url;
-      saveState();
-      setSyncStatus('Đang đẩy dữ liệu lên Sheets...');
+    async function doPush(url, opts) {
+      opts = opts || {};
+      if (!url) return { success: false, error: 'Chưa có URL backend' };
+      if (!opts.silent) setSyncStatus('Đang đẩy dữ liệu lên Sheets...');
       try {
         const payload = { trips: sanitizeTripsForPush(appState.trips) };
         const res = await fetch(url, {
@@ -962,15 +979,59 @@
         });
         const result = await res.json();
         if (result.success) {
-          setSyncStatus('Đẩy dữ liệu thành công lúc ' + new Date().toLocaleTimeString('vi-VN'));
-          alert('Đã đẩy dữ liệu lên Google Sheets thành công!');
+          setSyncStatus((opts.silent ? 'Đã tự động đồng bộ lúc ' : 'Đẩy dữ liệu thành công lúc ') + new Date().toLocaleTimeString('vi-VN'));
+          updateSyncDot(true);
         } else {
-          setSyncStatus('Lỗi: ' + (result.error || 'không rõ'));
-          alert('Đẩy dữ liệu thất bại: ' + (result.error || 'Lỗi không xác định'));
+          setSyncStatus('Lỗi đồng bộ: ' + (result.error || 'không rõ'));
+          updateSyncDot(false);
         }
+        return result;
       } catch (err) {
         setSyncStatus('Lỗi kết nối backend.');
-        alert('Không kết nối được backend. Kiểm tra lại URL và quyền deploy (Anyone) của Apps Script.');
+        updateSyncDot(false);
+        return { success: false, error: 'Không kết nối được backend' };
+      }
+    }
+
+    async function doPull(url, opts) {
+      opts = opts || {};
+      if (!url) return { success: false, error: 'Chưa có URL backend' };
+      if (!opts.silent) setSyncStatus('Đang tải dữ liệu từ Sheets...');
+      try {
+        const res = await fetch(url + (url.includes('?') ? '&' : '?') + 'action=pull');
+        const result = await res.json();
+        if (result.success && result.data && Array.isArray(result.data.trips) && result.data.trips.length > 0) {
+          isApplyingRemoteData = true;
+          appState.trips = result.data.trips;
+          if (!appState.trips.find(t => t.id === appState.activeTripId)) {
+            appState.activeTripId = appState.trips[0].id;
+          }
+          saveState();
+          fetchWeatherForCurrentDay();
+          isApplyingRemoteData = false;
+          setSyncStatus((opts.silent ? 'Đã tự động tải dữ liệu lúc ' : 'Tải dữ liệu thành công lúc ') + new Date().toLocaleTimeString('vi-VN'));
+          updateSyncDot(true);
+        } else if (!opts.silent) {
+          setSyncStatus('Chưa có dữ liệu trên Sheets.');
+        }
+        return result;
+      } catch (err) {
+        setSyncStatus('Lỗi kết nối backend.');
+        updateSyncDot(false);
+        return { success: false, error: 'Không kết nối được backend' };
+      }
+    }
+
+    async function pushToSheets() {
+      const url = (document.getElementById('backend-url').value || appState.backendUrl || '').trim();
+      if (!url) return alert('Vui lòng nhập URL Web App Apps Script!');
+      appState.backendUrl = url;
+      localStorage.setItem('TRAVEL_PRO_APP_V12', JSON.stringify(appState));
+      const result = await doPush(url, { silent: false });
+      if (result.success) {
+        alert('Đã đẩy dữ liệu lên Google Sheets thành công!');
+      } else {
+        alert('Đẩy dữ liệu thất bại: ' + (result.error || 'Lỗi không xác định'));
       }
     }
 
@@ -978,30 +1039,32 @@
       const url = (document.getElementById('backend-url').value || appState.backendUrl || '').trim();
       if (!url) return alert('Vui lòng nhập URL Web App Apps Script!');
       appState.backendUrl = url;
-      saveState();
-      setSyncStatus('Đang tải dữ liệu từ Sheets...');
-      try {
-        const res = await fetch(url + (url.includes('?') ? '&' : '?') + 'action=pull');
-        const result = await res.json();
-        if (result.success && result.data && Array.isArray(result.data.trips) && result.data.trips.length > 0) {
-          appState.trips = result.data.trips;
-          if (!appState.trips.find(t => t.id === appState.activeTripId)) {
-            appState.activeTripId = appState.trips[0].id;
-          }
-          saveState();
-          closeSheetsModal();
-          fetchWeatherForCurrentDay();
-          setSyncStatus('Tải dữ liệu thành công.');
-          alert('Đã tải dữ liệu mới nhất từ Google Sheets!');
-        } else {
-          setSyncStatus('Chưa có dữ liệu trên Sheets.');
-          alert('Chưa có dữ liệu nào trên Google Sheets. Hãy "Đẩy lên" trước.');
-        }
-      } catch (err) {
-        setSyncStatus('Lỗi kết nối backend.');
+      localStorage.setItem('TRAVEL_PRO_APP_V12', JSON.stringify(appState));
+      const result = await doPull(url, { silent: false });
+      if (result.success && result.data && Array.isArray(result.data.trips) && result.data.trips.length > 0) {
+        closeSheetsModal();
+        alert('Đã tải dữ liệu mới nhất từ Google Sheets!');
+      } else if (result.success) {
+        alert('Chưa có dữ liệu nào trên Google Sheets. Hãy "Đẩy lên" trước.');
+      } else {
         alert('Không kết nối được backend. Kiểm tra lại URL và quyền deploy (Anyone) của Apps Script.');
       }
     }
+
+    // Tự động tải dữ liệu mới nhất mỗi 30s (để thấy thay đổi của đối tác) —
+    // bỏ qua nếu đang có thay đổi local sắp được đẩy lên, tránh xung đột ghi đè.
+    setInterval(() => {
+      if (appState.backendUrl && !autoPushTimer) {
+        doPull(appState.backendUrl, { silent: true });
+      }
+    }, 30000);
+
+    // Tải lại dữ liệu mới nhất khi quay lại tab/app (ví dụ mở lại app trên điện thoại)
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible' && appState.backendUrl) {
+        doPull(appState.backendUrl, { silent: true });
+      }
+    });
 
     function formatDate(dateStr) {
       if (!dateStr) return '';
@@ -1186,6 +1249,9 @@
     render();
     fetchWeatherForCurrentDay();
     updateSyncDot();
+    if (appState.backendUrl) {
+      doPull(appState.backendUrl, { silent: true });
+    }
   </script>
 </body>
 </html>
