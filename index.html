@@ -54,12 +54,6 @@
             <i data-lucide="file-spreadsheet" class="w-4 h-4"></i>
             <span id="sheet-sync-dot" class="absolute top-2 right-2 w-2 h-2 rounded-full bg-slate-300"></span>
           </button>
-          <button onclick="openSheetsModal()" class="w-7 h-10 bg-white rounded-2xl border border-slate-200/60 shadow-sm text-slate-500 hover:text-emerald-600 active:scale-95 transition flex items-center justify-center -ml-1.5" title="Cấu hình đồng bộ Sheets">
-            <i data-lucide="settings-2" class="w-3.5 h-3.5"></i>
-          </button>
-          <button onclick="openShareModal()" class="w-10 h-10 bg-white rounded-2xl border border-slate-200/60 shadow-sm text-blue-600 hover:bg-blue-50 active:scale-95 transition flex items-center justify-center" title="Chia sẻ QR / JSON">
-            <i data-lucide="qr-code" class="w-4 h-4"></i>
-          </button>
         </div>
       </div>
     </div>
@@ -892,11 +886,15 @@
       const doc = trip.documents.find(d => d.id === id);
       if (!doc) return;
       const src = doc.driveUrl || doc.data;
+      // Link thumbnail dùng để xem (nhúng ảnh) — link tải về dùng file gốc trên Drive.
+      const downloadSrc = doc.driveFileId
+        ? `https://drive.google.com/uc?export=download&id=${doc.driveFileId}`
+        : src;
       document.getElementById('doc-modal-title').innerText = doc.name;
       const downloadBtn = document.getElementById('doc-download-btn');
-      downloadBtn.href = src;
+      downloadBtn.href = downloadSrc;
       downloadBtn.download = doc.name;
-      downloadBtn.target = doc.driveUrl ? '_blank' : '_self';
+      downloadBtn.target = doc.driveFileId ? '_blank' : '_self';
       const container = document.getElementById('doc-modal-content');
       container.innerHTML = doc.type.startsWith('image/') ? `<img src="${src}" class="max-w-full max-h-[75vh] object-contain rounded-2xl shadow-xl">` : `<iframe src="${src}" class="w-full h-[75vh] bg-white rounded-2xl"></iframe>`;
       document.getElementById('view-doc-modal').classList.remove('hidden');
