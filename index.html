@@ -430,7 +430,7 @@
   <script>
     // URL Web App Apps Script mặc định — đã gắn sẵn, không cần nhập tay trong app nữa.
     // Muốn đổi sau này, chỉ cần sửa giá trị này trong file HTML.
-    const DEFAULT_BACKEND_URL = 'https://script.google.com/macros/s/AKfycbzgqT4vD5dUWm0o_MBUl6ERmNp_eOxC-5uvLJzr4nC0kfoy6rIj70hOIFe24zlhUi4/exec';
+    const DEFAULT_BACKEND_URL = 'https://script.google.com/macros/s/AKfycbzJJKHKpbOEFKJnb1TnzBZ-QeyY7ByGQw4PPeTCpoVDJkPBEkCfyTQ7arqiubW0460/exec';
 
     let appState = JSON.parse(localStorage.getItem('TRAVEL_PRO_APP_V12')) || {
       activeTripId: 1,
@@ -456,6 +456,12 @@
     };
 
     if (!appState.backendUrl) appState.backendUrl = DEFAULT_BACKEND_URL;
+    // Máy đã từng lưu URL backend CŨ (bị lỗi) trong localStorage — tự chuyển sang URL mới.
+    const OLD_BROKEN_BACKEND_URL = 'https://script.google.com/macros/s/AKfycbzgqT4vD5dUWm0o_MBUl6ERmNp_eOxC-5uvLJzr4nC0kfoy6rIj70hOIFe24zlhUi4/exec';
+    if (appState.backendUrl === OLD_BROKEN_BACKEND_URL) {
+      appState.backendUrl = DEFAULT_BACKEND_URL;
+      appState.sheetViewUrl = ''; // xoá cache link Sheet cũ, để app tự lấy lại link mới
+    }
 
     function getCurrentTrip() {
       let trip = appState.trips.find(t => t.id === appState.activeTripId);
@@ -466,20 +472,73 @@
       return trip;
     }
 
-    let autoPushTimer = null;
+    let pushDebounceTimer = null;
+    let isSyncing = false;      // đang có 1 lượt push/pull chạy dở
     let isApplyingRemoteData = false;
+    const DIRTY_KEY = 'TRAVEL_SYNC_DIRTY';
+
+    // isDirty lưu vào localStorage (không chỉ biến JS) để SỐNG SÓT qua việc
+    // reload toàn bộ trang — ví dụ điện thoại tự tải lại app PWA sau khi bị
+    // hệ điều hành giải phóng bộ nhớ nền. Đây là nguyên nhân chính khiến 1 lượt
+    // xoá/sửa "biến mất" tưởng đã lưu: biến JS bị reset về false sau reload,
+    // app tưởng sạch sẽ rồi tự Tải về, kéo bản dữ liệu cũ đè lên bản vừa xoá.
+    function getIsDirty() { return localStorage.getItem(DIRTY_KEY) === '1'; }
+    function setDirty(val) {
+      if (val) localStorage.setItem(DIRTY_KEY, '1');
+      else localStorage.removeItem(DIRTY_KEY);
+    }
 
     function saveState() {
       localStorage.setItem('TRAVEL_PRO_APP_V12', JSON.stringify(appState));
-      render();
-      scheduleAutoPush();
+      // QUAN TRỌNG: đánh dấu dirty + lên lịch đẩy lên TRƯỚC khi render().
+      // Trước đây render() chạy trước — nếu 1 dòng dữ liệu lỗi làm render()
+      // văng lỗi (VD 1 trường bị Sheets tự đổi thành số), toàn bộ phần code
+      // phía sau (đánh dấu dirty, lên lịch đẩy lên) BỊ BỎ QUA LUÔN, khiến thay
+      // đổi/xoá không bao giờ được đồng bộ. Đổi thứ tự + bọc try/catch để
+      // render() có lỗi cũng không làm hỏng luồng lưu/đồng bộ nữa.
+      if (!isApplyingRemoteData) {
+        setDirty(true);
+        scheduleAutoPush();
+      }
+      try {
+        render();
+      } catch (err) {
+        console.error('Lỗi khi render() — dữ liệu vẫn đã lưu/lên lịch đồng bộ bình thường:', err);
+      }
     }
 
     function scheduleAutoPush() {
-      if (!appState.backendUrl || isApplyingRemoteData) return;
-      clearTimeout(autoPushTimer);
-      autoPushTimer = setTimeout(() => { doPush(appState.backendUrl, { silent: true }); }, 2000);
+      if (!appState.backendUrl) return;
+      clearTimeout(pushDebounceTimer);
+      pushDebounceTimer = setTimeout(runAutoPush, 1200);
     }
+
+    async function runAutoPush() {
+      if (!appState.backendUrl) return;
+      if (isSyncing) { pushDebounceTimer = setTimeout(runAutoPush, 1200); return; }
+      isSyncing = true;
+      const result = await doPush(appState.backendUrl, { silent: true });
+      isSyncing = false;
+      if (result.success) {
+        setDirty(false);
+      } else {
+        // Đẩy thất bại (mất mạng...) — thử lại sau, GIỮ dirty=true để chặn pull ghi đè
+        pushDebounceTimer = setTimeout(runAutoPush, 5000);
+      }
+    }
+
+    // Lưới an toàn cuối cùng: nếu người dùng đóng tab/app ngay khi vừa sửa
+    // (trước khi kịp debounce 1.2s), cố gắng đẩy nốt bằng sendBeacon — không
+    // đảm bảo chắc chắn thành công, nhưng cờ dirty vẫn còn nên lần mở app kế
+    // tiếp sẽ tự đẩy lại trước khi cho phép tải về.
+    window.addEventListener('pagehide', () => {
+      if (getIsDirty() && appState.backendUrl) {
+        try {
+          const payload = JSON.stringify({ action: 'push', data: { trips: sanitizeTripsForPush(appState.trips) } });
+          navigator.sendBeacon(appState.backendUrl, payload);
+        } catch (err) { /* bỏ qua, lần mở app sau sẽ tự đẩy lại nhờ cờ dirty */ }
+      }
+    });
 
     /* TRIP MANAGEMENT LOGIC */
     function openTripManagerModal() {
@@ -1058,8 +1117,11 @@
       appState.backendUrl = url;
       localStorage.setItem('TRAVEL_PRO_APP_V12', JSON.stringify(appState));
       if (!appState.sheetViewUrl) fetchSheetMeta(url);
+      isSyncing = true;
       const result = await doPush(url, { silent: false });
+      isSyncing = false;
       if (result.success) {
+        setDirty(false);
         alert('Đã đẩy dữ liệu lên Google Sheets thành công!');
       } else {
         alert('Đẩy dữ liệu thất bại: ' + (result.error || 'Lỗi không xác định'));
@@ -1071,7 +1133,9 @@
       if (!url) return alert('Vui lòng nhập URL Web App Apps Script!');
       appState.backendUrl = url;
       localStorage.setItem('TRAVEL_PRO_APP_V12', JSON.stringify(appState));
+      isSyncing = true;
       const result = await doPull(url, { silent: false });
+      isSyncing = false;
       if (result.success && result.data && Array.isArray(result.data.trips) && result.data.trips.length > 0) {
         closeSheetsModal();
         alert('Đã tải dữ liệu mới nhất từ Google Sheets!');
@@ -1082,18 +1146,23 @@
       }
     }
 
-    // Tự động tải dữ liệu mới nhất mỗi 30s (để thấy thay đổi của đối tác) —
-    // bỏ qua nếu đang có thay đổi local sắp được đẩy lên, tránh xung đột ghi đè.
+    // Tự động tải dữ liệu mới nhất mỗi 20s (để thấy thay đổi của đối tác) —
+    // BỎ QUA nếu đang có thay đổi local chưa kịp đẩy lên (getIsDirty()), để không ghi đè mất.
     setInterval(() => {
-      if (appState.backendUrl && !autoPushTimer) {
+      if (appState.backendUrl && !getIsDirty() && !isSyncing) {
         doPull(appState.backendUrl, { silent: true });
       }
-    }, 30000);
+    }, 20000);
 
-    // Tải lại dữ liệu mới nhất khi quay lại tab/app (ví dụ mở lại app trên điện thoại)
+    // Tải lại dữ liệu mới nhất khi quay lại tab/app — cũng phải chờ hết dirty trước.
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'visible' && appState.backendUrl) {
-        doPull(appState.backendUrl, { silent: true });
+        if (getIsDirty() && !isSyncing) {
+          // Vẫn còn thay đổi chưa đẩy lên từ trước (VD: reload giữa chừng) — đẩy lên trước, không tải về vội
+          runAutoPush();
+        } else if (!getIsDirty() && !isSyncing) {
+          doPull(appState.backendUrl, { silent: true });
+        }
       }
     });
 
@@ -1251,13 +1320,14 @@
       if (!trip.utilities) trip.utilities = [];
       trip.utilities.forEach(u => {
         let contentHtml = '';
+        const descStr = String(u.desc == null ? '' : u.desc); // ép string phòng dữ liệu lỗi (VD Sheets tự đổi số điện thoại thành số)
         if (u.category === 'LINK') {
-          const targetUrl = u.desc.startsWith('http') ? u.desc : 'https://' + u.desc;
-          contentHtml = `<a href="${targetUrl}" target="_blank" class="inline-flex items-center gap-1 text-xs font-bold text-blue-600 hover:underline mt-0.5 truncate max-w-[200px]"><i data-lucide="external-link" class="w-3.5 h-3.5 shrink-0"></i><span class="truncate">${u.desc}</span></a>`;
+          const targetUrl = descStr.startsWith('http') ? descStr : 'https://' + descStr;
+          contentHtml = `<a href="${targetUrl}" target="_blank" class="inline-flex items-center gap-1 text-xs font-bold text-blue-600 hover:underline mt-0.5 truncate max-w-[200px]"><i data-lucide="external-link" class="w-3.5 h-3.5 shrink-0"></i><span class="truncate">${descStr}</span></a>`;
         } else if (u.category === 'PHONE') {
-          contentHtml = `<a href="tel:${u.desc.replace(/\s+/g, '')}" class="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-600 hover:underline mt-0.5"><i data-lucide="phone-call" class="w-3.5 h-3.5 shrink-0"></i> ${u.desc}</a>`;
+          contentHtml = `<a href="tel:${descStr.replace(/\s+/g, '')}" class="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-600 hover:underline mt-0.5"><i data-lucide="phone-call" class="w-3.5 h-3.5 shrink-0"></i> ${descStr}</a>`;
         } else {
-          contentHtml = `<p class="text-xs font-semibold text-slate-600 mt-0.5 break-all">${u.desc}</p>`;
+          contentHtml = `<p class="text-xs font-semibold text-slate-600 mt-0.5 break-all">${descStr}</p>`;
         }
 
         utilList.innerHTML += `
@@ -1267,7 +1337,7 @@
               ${contentHtml}
             </div>
             <div class="flex items-center gap-1 shrink-0">
-              <button onclick="copyToClipboard('${u.desc.replace(/'/g, "\\'")}', this)" class="p-2 text-slate-400 hover:text-blue-600 hover:bg-slate-50 rounded-xl transition"><i data-lucide="copy" class="w-4 h-4"></i></button>
+              <button onclick="copyToClipboard('${descStr.replace(/'/g, "\\'")}', this)" class="p-2 text-slate-400 hover:text-blue-600 hover:bg-slate-50 rounded-xl transition"><i data-lucide="copy" class="w-4 h-4"></i></button>
               <button onclick="deleteUtility(${u.id})" class="p-2 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
             </div>
           </div>
@@ -1277,11 +1347,24 @@
       lucide.createIcons();
     }
 
-    render();
+    try { render(); } catch (err) { console.error('Lỗi render() lúc khởi động:', err); }
     fetchWeatherForCurrentDay();
     updateSyncDot();
     if (appState.backendUrl) {
-      doPull(appState.backendUrl, { silent: true });
+      if (getIsDirty()) {
+        // Có thay đổi từ phiên trước chưa kịp đẩy lên (VD: app bị tải lại giữa
+        // chừng) — PHẢI đẩy lên trước, tuyệt đối không tải về lúc này kẻo
+        // ghi đè mất chính thay đổi đó.
+        isSyncing = true;
+        doPush(appState.backendUrl, { silent: true }).then(result => {
+          isSyncing = false;
+          if (result.success) setDirty(false);
+          else pushDebounceTimer = setTimeout(runAutoPush, 5000);
+        });
+      } else {
+        isSyncing = true;
+        doPull(appState.backendUrl, { silent: true }).finally(() => { isSyncing = false; });
+      }
       if (!appState.sheetViewUrl) fetchSheetMeta(appState.backendUrl);
     }
   </script>
