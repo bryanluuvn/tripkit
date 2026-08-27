@@ -1091,7 +1091,21 @@
         const result = await res.json();
         if (result.success && result.data && Array.isArray(result.data.trips) && result.data.trips.length > 0) {
           isApplyingRemoteData = true;
-          appState.trips = result.data.trips;
+          // "currentDay" (ngày đang xem) và "priorityFilter" (bộ lọc Tất cả/Dự
+          // phòng) là TRẠNG THÁI XEM RIÊNG của từng máy — không phải dữ liệu
+          // dùng chung. Nếu ghi đè bằng giá trị từ Sheets (vốn có thể là giá
+          // trị cũ do MÁY KHÁC đẩy lên lúc họ đang xem ngày/filter khác), bạn
+          // sẽ thấy app tự "nhảy" ngày hoặc tự đổi filter sau mỗi lần tải về.
+          // Giữ nguyên giá trị đang xem cục bộ cho trip đã có sẵn trên máy này.
+          const oldTripsById = {};
+          (appState.trips || []).forEach(t => { oldTripsById[String(t.id)] = t; });
+          appState.trips = result.data.trips.map(newTrip => {
+            const old = oldTripsById[String(newTrip.id)];
+            if (old) {
+              return { ...newTrip, currentDay: old.currentDay, priorityFilter: old.priorityFilter };
+            }
+            return newTrip;
+          });
           if (!appState.trips.find(t => t.id === appState.activeTripId)) {
             appState.activeTripId = appState.trips[0].id;
           }
