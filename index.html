@@ -688,14 +688,18 @@
       fetchWeatherForCurrentDay();
     }
 
-    function setPriorityFilter(p) {
-      const trip = getCurrentTrip();
-      trip.priorityFilter = p;
+    function updatePriorityFilterButtons(p) {
       ['ALL', 'MUST', 'BACKUP'].forEach(key => {
         const btn = document.getElementById(`pfilter-${key}`);
         if(btn) btn.className = key === p ? 'flex-1 py-2 rounded-xl bg-white text-[var(--tk-text)] shadow-sm transition font-bold' : 'flex-1 py-2 rounded-xl text-slate-500 hover:text-[var(--tk-text)] transition font-semibold';
       });
-      render();
+    }
+
+    function setPriorityFilter(p) {
+      const trip = getCurrentTrip();
+      trip.priorityFilter = p;
+      updatePriorityFilterButtons(p);
+      saveState();
     }
 
     function toggleStatus(id) {
@@ -1266,6 +1270,7 @@
       }
 
       // Activities
+      updatePriorityFilterButtons(trip.priorityFilter);
       const dayActs = trip.activities.filter(a => a.day === trip.currentDay);
       dayActs.sort((a, b) => (a.time || '00:00').localeCompare(b.time || '00:00'));
 
