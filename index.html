@@ -1020,8 +1020,15 @@
       const doc = galleryDocs[galleryIndex];
       if (!doc) return closeDocModal();
       const src = doc.driveUrl || doc.data;
+      // Ảnh: link tải trực tiếp (đã có "nhấn giữ ảnh để lưu" làm phương án chính).
+      // PDF/file khác: trỏ tới trang xem của Drive — đáng tin cậy hơn link tải
+      // thẳng khi mở từ chế độ standalone (Add to Home Screen), vì trang Drive
+      // có nút tải/chia sẻ riêng và việc điều hướng sang domain khác thường
+      // khiến iOS tự chuyển sang Safari thật để xử lý được.
       const downloadSrc = doc.driveFileId
-        ? `https://drive.google.com/uc?export=download&id=${doc.driveFileId}`
+        ? (doc.type.startsWith('image/')
+            ? `https://drive.google.com/uc?export=download&id=${doc.driveFileId}`
+            : `https://drive.google.com/file/d/${doc.driveFileId}/view`)
         : src;
 
       document.getElementById('doc-modal-title').innerText = doc.name;
@@ -1033,20 +1040,23 @@
 
       document.getElementById('doc-prev-btn').classList.toggle('hidden', galleryDocs.length <= 1);
       document.getElementById('doc-next-btn').classList.toggle('hidden', galleryDocs.length <= 1);
-      document.getElementById('doc-modal-hint').classList.toggle('hidden', !doc.type.startsWith('image/'));
+      const hintEl = document.getElementById('doc-modal-hint');
+      hintEl.innerText = doc.type.startsWith('image/')
+        ? 'Nhấn giữ ảnh để lưu về máy • Nhấn đúp hoặc chụm 2 ngón để phóng to'
+        : 'Nếu "Tải về" không phản hồi, nó sẽ mở trang Drive — dùng nút tải ở đó';
 
       const media = document.getElementById('doc-modal-media');
       zoomState = { scale: 1, tx: 0, ty: 0 };
       if (doc.type.startsWith('image/')) {
         media.innerHTML = `<img id="doc-zoom-img" src="${src}" class="max-w-full max-h-[70vh] object-contain rounded-2xl shadow-xl select-none" style="transform:translate(0px,0px) scale(1); transition:transform .15s ease-out;" draggable="false">`;
-        setupImageZoom(document.getElementById('doc-zoom-img'), media);
+        setupImageZoom(document.getElementById('doc-zoom-img'));
       } else {
         media.innerHTML = `<iframe src="${src}" class="w-full h-[70vh] bg-white rounded-2xl"></iframe>`;
       }
       lucide.createIcons();
     }
 
-    function setupImageZoom(img, wrapper) {
+    function setupImageZoom(img) {
       let startDist = 0, startScale = 1, lastTap = 0;
       let panning = false, lastX = 0, lastY = 0;
       let swipeStartX = null, swipeStartY = null;
@@ -1061,7 +1071,11 @@
         apply();
       }
 
-      wrapper.addEventListener('touchstart', (e) => {
+      // Gắn trực tiếp vào <img> — phần tử này được tạo MỚI mỗi lần đổi ảnh
+      // (renderDocViewer ghi đè innerHTML), nên listener cũ tự bị dọn theo
+      // khi ảnh cũ bị gỡ khỏi DOM. Trước đây gắn vào khung "wrapper" cố định
+      // (không đổi qua các lần vuốt) khiến listener chồng chất mãi -> đứng hình.
+      img.addEventListener('touchstart', (e) => {
         img.style.transition = 'none';
         if (e.touches.length === 2) {
           startDist = dist(e.touches); startScale = zoomState.scale;
@@ -1075,7 +1089,7 @@
         }
       }, { passive: true });
 
-      wrapper.addEventListener('touchmove', (e) => {
+      img.addEventListener('touchmove', (e) => {
         if (e.touches.length === 2 && startDist > 0) {
           const newScale = Math.min(4, Math.max(1, startScale * (dist(e.touches) / startDist)));
           zoomState.scale = newScale; apply();
@@ -1087,7 +1101,7 @@
         }
       }, { passive: true });
 
-      wrapper.addEventListener('touchend', (e) => {
+      img.addEventListener('touchend', (e) => {
         panning = false; startDist = 0;
         if (zoomState.scale <= 1 && swipeStartX !== null && e.changedTouches.length === 1) {
           const dx = e.changedTouches[0].clientX - swipeStartX;
