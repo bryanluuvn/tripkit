@@ -1020,15 +1020,13 @@
       const doc = galleryDocs[galleryIndex];
       if (!doc) return closeDocModal();
       const src = doc.driveUrl || doc.data;
-      // Ảnh: link tải trực tiếp (đã có "nhấn giữ ảnh để lưu" làm phương án chính).
-      // PDF/file khác: trỏ tới trang xem của Drive — đáng tin cậy hơn link tải
-      // thẳng khi mở từ chế độ standalone (Add to Home Screen), vì trang Drive
-      // có nút tải/chia sẻ riêng và việc điều hướng sang domain khác thường
-      // khiến iOS tự chuyển sang Safari thật để xử lý được.
+      // Trỏ thẳng tới trang xem của Drive cho MỌI loại file (ảnh lẫn PDF) —
+      // link tải trực tiếp (uc?export=download) hay bị im lặng không phản hồi
+      // khi mở từ chế độ standalone (Add to Home Screen). Trang Drive có nút
+      // tải/chia sẻ riêng, và việc điều hướng sang domain khác thường khiến
+      // iOS tự chuyển sang Safari thật để xử lý được.
       const downloadSrc = doc.driveFileId
-        ? (doc.type.startsWith('image/')
-            ? `https://drive.google.com/uc?export=download&id=${doc.driveFileId}`
-            : `https://drive.google.com/file/d/${doc.driveFileId}/view`)
+        ? `https://drive.google.com/file/d/${doc.driveFileId}/view`
         : src;
 
       document.getElementById('doc-modal-title').innerText = doc.name;
@@ -1042,7 +1040,7 @@
       document.getElementById('doc-next-btn').classList.toggle('hidden', galleryDocs.length <= 1);
       const hintEl = document.getElementById('doc-modal-hint');
       hintEl.innerText = doc.type.startsWith('image/')
-        ? 'Nhấn giữ ảnh để lưu về máy • Nhấn đúp hoặc chụm 2 ngón để phóng to'
+        ? 'Nhấn giữ ảnh để lưu về máy, hoặc bấm "Tải về" để mở trang Drive • Nhấn đúp / chụm 2 ngón để phóng to'
         : 'Nếu "Tải về" không phản hồi, nó sẽ mở trang Drive — dùng nút tải ở đó';
 
       const media = document.getElementById('doc-modal-media');
