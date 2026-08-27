@@ -131,7 +131,7 @@
           <div class="p-5 pt-4 space-y-2">
             <div class="flex items-center justify-between">
               <span class="text-[10px] font-bold font-mono tracking-[0.1em] uppercase text-slate-400">Chọn ngày & Địa điểm</span>
-              <button onclick="openDayLocationModal()" class="text-[11px] font-bold text-blue-500 hover:underline flex items-center gap-1">
+              <button onclick="openDayLocationModal()" id="day-location-btn" class="text-[11px] font-bold text-blue-500 hover:underline flex items-center gap-1">
                 <i data-lucide="map-pin-line" class="w-3.5 h-3.5"></i> Đổi vị trí Ngày <span id="current-day-num-label">1</span>
               </button>
             </div>
@@ -147,9 +147,11 @@
             <button onclick="setPriorityFilter('BACKUP')" id="pfilter-BACKUP" class="flex-1 py-2 rounded-xl text-slate-500 hover:text-[var(--tk-text)] transition">Dự phòng</button>
           </div>
 
-          <button onclick="openDayMap()" class="px-3.5 py-2.5 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-[#fff] font-bold text-xs rounded-2xl shadow-sm shadow-emerald-600/20 flex items-center gap-1.5 transition shrink-0">
+          <button onclick="openDayMap()" title="Bản đồ ngày" class="px-3.5 py-2.5 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-[#fff] font-bold text-xs rounded-2xl shadow-sm shadow-emerald-600/20 flex items-center gap-1.5 transition shrink-0">
             <i data-lucide="map" class="w-4 h-4"></i>
-            <span>Bản đồ Ngày</span>
+          </button>
+          <button onclick="openOverviewModal()" title="Xem toàn bộ lịch trình" class="px-3.5 py-2.5 bg-white border border-slate-200/80 hover:border-blue-500 active:scale-95 text-slate-600 font-bold text-xs rounded-2xl shadow-sm flex items-center gap-1.5 transition shrink-0">
+            <i data-lucide="list-todo" class="w-4 h-4"></i>
           </button>
         </div>
 
@@ -167,7 +169,7 @@
           <input type="text" id="act-title" placeholder="Tên hoạt động / Địa điểm" class="w-full bg-slate-50/80 border border-slate-200/80 rounded-2xl px-3.5 py-3 text-xs text-slate-800 font-medium outline-none focus:bg-white focus:border-blue-500 transition">
 
           <div class="grid grid-cols-2 gap-2">
-            <input type="text" id="act-location" placeholder="Địa chỉ (Tạo map)" class="bg-slate-50/80 border border-slate-200/80 rounded-2xl px-3.5 py-3 text-xs text-slate-800 font-medium outline-none focus:bg-white focus:border-blue-500 transition">
+            <input type="text" id="act-location" placeholder="Địa chỉ hoặc dán link Maps" class="bg-slate-50/80 border border-slate-200/80 rounded-2xl px-3.5 py-3 text-xs text-slate-800 font-medium outline-none focus:bg-white focus:border-blue-500 transition">
             <input type="time" id="act-time" value="09:00" class="bg-slate-50/80 border border-slate-200/80 rounded-2xl px-3 py-3 text-xs text-slate-800 font-semibold outline-none focus:bg-white focus:border-blue-500 transition">
           </div>
 
@@ -308,6 +310,17 @@
     </div>
   </div>
 
+  <!-- MODAL OVERVIEW TOÀN BỘ LỊCH TRÌNH -->
+  <div id="overview-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="max-w-sm w-full bg-white rounded-3xl p-5 space-y-3 shadow-2xl border border-slate-100 max-h-[85vh] flex flex-col">
+      <div class="flex justify-between items-center border-b border-slate-100 pb-3 shrink-0">
+        <h3 class="text-sm font-extrabold text-[var(--tk-text)] flex items-center gap-2"><i data-lucide="list-todo" class="w-4 h-4 text-blue-500"></i> Toàn bộ lịch trình</h3>
+        <button onclick="closeOverviewModal()" class="p-1 text-slate-400 hover:text-slate-600"><i data-lucide="x" class="w-5 h-5"></i></button>
+      </div>
+      <div id="overview-content" class="space-y-4 overflow-y-auto"></div>
+    </div>
+  </div>
+
   <!-- MODAL EDIT ACTIVITY -->
   <div id="edit-act-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
     <div class="max-w-sm w-full bg-white rounded-3xl p-5 space-y-4 shadow-2xl border border-slate-100">
@@ -323,9 +336,15 @@
         </div>
         <div class="grid grid-cols-2 gap-2">
           <div>
+            <label class="text-[11px] font-bold text-slate-500 block mb-1">Ngày</label>
+            <select id="edit-act-day" class="w-full bg-slate-50 border border-slate-200/80 rounded-2xl p-3 text-xs font-semibold outline-none focus:bg-white focus:border-blue-500"></select>
+          </div>
+          <div>
             <label class="text-[11px] font-bold text-slate-500 block mb-1">Thời gian</label>
             <input type="time" id="edit-act-time" class="w-full bg-slate-50 border border-slate-200/80 rounded-2xl p-3 text-xs font-semibold outline-none focus:bg-white focus:border-blue-500">
           </div>
+        </div>
+        <div class="grid grid-cols-2 gap-2">
           <div>
             <label class="text-[11px] font-bold text-slate-500 block mb-1">Loại danh mục</label>
             <select id="edit-act-category" class="w-full bg-slate-50 border border-slate-200/80 rounded-2xl p-3 text-xs font-semibold outline-none focus:bg-white focus:border-blue-500">
@@ -346,7 +365,7 @@
           </div>
           <div>
             <label class="text-[11px] font-bold text-slate-500 block mb-1">Địa điểm</label>
-            <input type="text" id="edit-act-location" placeholder="Không bắt buộc" class="w-full bg-slate-50 border border-slate-200/80 rounded-2xl p-3 text-xs font-medium outline-none focus:bg-white focus:border-blue-500">
+            <input type="text" id="edit-act-location" placeholder="Địa chỉ hoặc dán link Maps" class="w-full bg-slate-50 border border-slate-200/80 rounded-2xl p-3 text-xs font-medium outline-none focus:bg-white focus:border-blue-500">
           </div>
         </div>
         <div>
@@ -701,7 +720,7 @@
       const trip = getCurrentTrip();
       trip.currentDay = day; 
       saveState(); 
-      fetchWeatherForCurrentDay();
+      if (day > 0) fetchWeatherForCurrentDay();
     }
 
     function updatePriorityFilterButtons(p) {
@@ -840,6 +859,11 @@
       const trip = getCurrentTrip();
       const act = trip.activities.find(a => a.id === id);
       if (!act) return;
+      const daySelect = document.getElementById('edit-act-day');
+      let opts = '<option value="0">📥 Chưa xếp ngày</option>';
+      for (let i = 1; i <= trip.totalDays; i++) opts += `<option value="${i}">Ngày ${i}</option>`;
+      daySelect.innerHTML = opts;
+      daySelect.value = act.day;
       document.getElementById('edit-act-id').value = act.id;
       document.getElementById('edit-act-title').value = act.title;
       document.getElementById('edit-act-time').value = act.time;
@@ -857,6 +881,7 @@
       const act = trip.activities.find(a => a.id === id);
       if (act) {
         act.title = document.getElementById('edit-act-title').value.trim() || act.title;
+        act.day = Number(document.getElementById('edit-act-day').value);
         act.time = document.getElementById('edit-act-time').value;
         act.category = document.getElementById('edit-act-category').value;
         act.priority = document.getElementById('edit-act-priority').value;
@@ -865,6 +890,59 @@
         saveState();
       }
       closeEditActModal();
+    }
+
+    /* Nếu địa điểm đã là 1 link (VD dán link Google Maps đã chuẩn bị sẵn) thì
+       dùng thẳng link đó — không bọc thành query tìm kiếm nữa. */
+    function buildMapHref(loc) {
+      const trimmed = (loc || '').trim();
+      if (/^https?:\/\//i.test(trimmed)) return trimmed;
+      return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(trimmed)}`;
+    }
+
+    /* OVERVIEW TOÀN BỘ LỊCH TRÌNH */
+    function openOverviewModal() {
+      const trip = getCurrentTrip();
+      const start = trip.startDate ? new Date(trip.startDate) : new Date();
+      const groups = [];
+
+      const unsched = trip.activities.filter(a => a.day === 0).sort((a, b) => (a.time || '').localeCompare(b.time || ''));
+      if (unsched.length > 0) groups.push({ label: '📥 Chưa xếp ngày', dateStr: '', day: 0, acts: unsched });
+
+      for (let i = 1; i <= trip.totalDays; i++) {
+        const curDate = new Date(start);
+        curDate.setDate(start.getDate() + (i - 1));
+        const dateStr = `${curDate.getDate()}/${curDate.getMonth() + 1}`;
+        const acts = trip.activities.filter(a => a.day === i).sort((a, b) => (a.time || '').localeCompare(b.time || ''));
+        groups.push({ label: `Ngày ${i}`, dateStr, day: i, acts });
+      }
+
+      const content = document.getElementById('overview-content');
+      content.innerHTML = groups.map(g => `
+        <div>
+          <div class="flex items-center justify-between mb-1.5 sticky top-0 bg-white py-1">
+            <h4 class="text-xs font-extrabold text-[var(--tk-text)]">${g.label} ${g.dateStr ? `<span class="text-slate-400 font-medium">(${g.dateStr})</span>` : ''}</h4>
+            <button onclick="jumpToDayFromOverview(${g.day})" class="text-[10px] font-bold text-blue-500 hover:underline">Đi tới →</button>
+          </div>
+          ${g.acts.length === 0
+            ? '<p class="text-[11px] text-slate-300 italic pl-1">Chưa có hoạt động</p>'
+            : g.acts.map(a => `
+                <div class="flex items-center gap-2 py-1.5 pl-1 border-b border-slate-50 last:border-0">
+                  <span class="text-[11px] font-bold text-blue-600 w-10 shrink-0">${a.time}</span>
+                  <span class="text-[10px] shrink-0">${getCategoryIcon(a.category).emoji}</span>
+                  <span class="text-xs font-semibold text-slate-700 truncate ${a.status === 'COMPLETED' ? 'line-through text-slate-300' : ''}">${a.title}</span>
+                </div>
+              `).join('')
+          }
+        </div>
+      `).join('');
+
+      document.getElementById('overview-modal').classList.remove('hidden');
+    }
+    function closeOverviewModal() { document.getElementById('overview-modal').classList.add('hidden'); }
+    function jumpToDayFromOverview(day) {
+      setDay(day);
+      closeOverviewModal();
     }
 
     /* MAP GENERATION */
@@ -876,11 +954,15 @@
       if (dayActs.length === 0) return alert('Chưa có địa điểm nào có địa chỉ trong ngày này!');
 
       if (dayActs.length === 1) {
-        window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(dayActs[0].location)}`, '_blank');
+        window.open(buildMapHref(dayActs[0].location), '_blank');
       } else {
-        const origin = encodeURIComponent(dayActs[0].location);
-        const destination = encodeURIComponent(dayActs[dayActs.length - 1].location);
-        const waypoints = dayActs.slice(1, -1).map(a => encodeURIComponent(a.location)).join('|');
+        // Directions API cần tên/địa chỉ dạng text, không nhận link Maps lồng bên trong —
+        // nên chỉ ghép các điểm là địa chỉ text; điểm nào đã là link thì mở riêng bằng nút của điểm đó.
+        const textActs = dayActs.filter(a => !/^https?:\/\//i.test(a.location.trim()));
+        if (textActs.length < 2) return window.open(buildMapHref(dayActs[0].location), '_blank');
+        const origin = encodeURIComponent(textActs[0].location);
+        const destination = encodeURIComponent(textActs[textActs.length - 1].location);
+        const waypoints = textActs.slice(1, -1).map(a => encodeURIComponent(a.location)).join('|');
         const mapUrl = `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}${waypoints ? '&waypoints=' + waypoints : ''}`;
         window.open(mapUrl, '_blank');
       }
@@ -1349,14 +1431,28 @@
       }
     }
 
+    // Bản gọn (chỉ icon + nhãn để làm tooltip) — dùng trong thẻ hoạt động rút gọn,
+    // tránh chiếm nhiều chỗ / xuống dòng như bản pill đầy đủ ở trên.
+    function getCategoryIcon(cat) {
+      switch(cat) {
+        case 'FOOD': return { emoji: '🍽️', label: 'Ăn uống' };
+        case 'HOTEL': return { emoji: '🏨', label: 'Nghỉ ngơi' };
+        case 'TRANSPORT': return { emoji: '🚗', label: 'Di chuyển' };
+        default: return { emoji: '🎯', label: 'Vui chơi' };
+      }
+    }
+
     /* RENDER APP */
     function render() {
       const trip = getCurrentTrip();
 
       document.getElementById('trip-title-display').innerText = trip.tripTitle;
       document.getElementById('trip-subtitle-display').innerText = `${trip.totalDays} ngày • Khởi hành ${formatDate(trip.startDate)}`;
-      document.getElementById('add-day-label').innerText = trip.currentDay;
-      document.getElementById('current-day-num-label').innerText = trip.currentDay;
+      const dayLabel = trip.currentDay > 0 ? trip.currentDay : 'Chưa xếp';
+      document.getElementById('add-day-label').innerText = dayLabel;
+      document.getElementById('current-day-num-label').innerText = dayLabel;
+      document.getElementById('weather-btn').classList.toggle('hidden', trip.currentDay === 0);
+      document.getElementById('day-location-btn').classList.toggle('hidden', trip.currentDay === 0);
 
       // Cập nhật chấm báo trạng thái Google Sheets trên Header
       updateSyncDot();
@@ -1367,6 +1463,20 @@
       const start = trip.startDate ? new Date(trip.startDate) : new Date();
 
       if(!trip.dayLocations) trip.dayLocations = {};
+
+      // Chip đặc biệt "Chưa xếp ngày" (day = 0) — tái dùng toàn bộ logic lọc/hiển thị
+      // theo ngày sẵn có, chỉ là "ngày" này không gắn với ngày tháng thật nào.
+      const unscheduledCount = trip.activities.filter(a => a.day === 0).length;
+      const isUnschedActive = trip.currentDay === 0;
+      dayContainer.innerHTML += `
+        <button onclick="setDay(0)" class="px-3.5 py-2 rounded-full text-xs font-bold transition flex items-center gap-2 shrink-0 active:scale-95 border ${
+          isUnschedActive ? 'bg-slate-700 border-slate-700 text-[#fff] shadow-md' : 'bg-white border-dashed border-slate-300 text-slate-500 hover:border-slate-400'
+        }">
+          <i data-lucide="inbox" class="w-3.5 h-3.5"></i>
+          <span>Chưa xếp ngày</span>
+          ${unscheduledCount > 0 ? `<span class="text-[10px] opacity-75 font-normal">(${unscheduledCount})</span>` : ''}
+        </button>
+      `;
 
       for (let i = 1; i <= trip.totalDays; i++) {
         const isActive = trip.currentDay === i;
@@ -1407,17 +1517,14 @@
       } else {
         filtered.forEach(act => {
           const isDone = act.status === 'COMPLETED';
-          let priorityBadge = act.priority === 'MUST' 
-            ? '<span class="text-[10px] font-bold text-rose-600 bg-rose-50 px-2.5 py-0.5 rounded-full border border-rose-100">Bắt buộc</span>' 
-            : '<span class="text-[10px] font-bold text-amber-600 bg-amber-50 px-2.5 py-0.5 rounded-full border border-amber-100">Dự phòng</span>';
-          
-          let catBadge = getCategoryBadge(act.category);
+          const priorityBorder = act.priority === 'MUST' ? 'border-l-rose-400' : 'border-l-amber-400';
+          const catIcon = getCategoryIcon(act.category);
 
           let locationHtml = '';
           if (act.location && act.location.trim() !== '') {
             locationHtml = `
               <div class="flex items-center gap-2 text-[11px] text-slate-500 pt-1">
-                <a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(act.location)}" target="_blank" class="hover:text-blue-600 flex items-center gap-1 truncate max-w-[190px]">
+                <a href="${buildMapHref(act.location)}" target="_blank" class="hover:text-blue-600 flex items-center gap-1 truncate max-w-[190px]">
                   <i data-lucide="map-pin" class="w-3.5 h-3.5 text-slate-400 shrink-0"></i>
                   <span class="truncate underline font-semibold">${act.location}</span>
                 </a>
@@ -1426,8 +1533,8 @@
           }
 
           actContainer.innerHTML += `
-            <div class="bg-white rounded-3xl p-4 border border-slate-200/60 shadow-sm flex items-center justify-between gap-3 ${isDone ? 'opacity-50' : ''}">
-              <div class="flex items-center gap-3.5 min-w-0">
+            <div class="bg-white rounded-3xl p-4 pl-3.5 border border-slate-200/60 border-l-4 ${priorityBorder} shadow-sm flex items-center justify-between gap-3 ${isDone ? 'opacity-50' : ''}">
+              <div class="flex items-center gap-3 min-w-0">
                 <button onclick="toggleStatus(${act.id})" class="w-10 h-10 rounded-full border flex items-center justify-center shrink-0 transition ${
                   isDone ? 'bg-emerald-50 border-emerald-300 text-emerald-600 shadow-sm' : 'bg-slate-50 border-slate-200 text-slate-300'
                 }">
@@ -1435,10 +1542,9 @@
                 </button>
 
                 <div class="min-w-0 space-y-0.5">
-                  <div class="flex items-center gap-1.5 flex-wrap">
+                  <div class="flex items-center gap-1.5">
                     <span class="text-xs font-extrabold text-blue-600">${act.time}</span>
-                    ${catBadge}
-                    ${priorityBadge}
+                    <span class="text-xs" title="${catIcon.label}">${catIcon.emoji}</span>
                   </div>
                   <h4 class="text-xs font-extrabold text-[var(--tk-text)] truncate leading-snug ${isDone ? 'line-through text-slate-400' : ''}">${act.title}</h4>
                   ${locationHtml}
