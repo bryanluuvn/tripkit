@@ -1336,10 +1336,41 @@
       const media = document.getElementById('doc-modal-media');
       zoomState = { scale: 1, tx: 0, ty: 0 };
       if (doc.type.startsWith('image/')) {
-        media.innerHTML = `<img id="doc-zoom-img" src="${src}" class="max-w-full max-h-[70vh] object-contain rounded-2xl shadow-xl select-none" style="transform:translate(0px,0px) scale(1); transition:transform .15s ease-out;" draggable="false">`;
-        setupImageZoom(document.getElementById('doc-zoom-img'));
+        // Giảm từ 2000px xuống 1600px — vẫn đủ nét khi zoom trên điện thoại,
+        // nhưng nhẹ hơn đáng kể (tải nhanh hơn, đỡ trông như "đơ" khi mạng chậm).
+        const viewSrc = src && src.includes('drive.google.com/thumbnail') ? src.replace(/sz=w\d+/, 'sz=w1600') : src;
+        media.innerHTML = `
+          <div class="relative w-full h-full flex items-center justify-center">
+            <div id="doc-loading-spinner" class="absolute w-8 h-8 border-[3px] border-slate-600 border-t-white rounded-full animate-spin"></div>
+            <img id="doc-zoom-img" src="${viewSrc}" class="max-w-full max-h-[70vh] object-contain rounded-2xl shadow-xl select-none opacity-0 transition-opacity duration-200" style="transform:translate(0px,0px) scale(1);" draggable="false">
+          </div>
+        `;
+        const imgEl = document.getElementById('doc-zoom-img');
+        const spinnerEl = document.getElementById('doc-loading-spinner');
+        const onImgReady = () => {
+          spinnerEl.remove();
+          imgEl.style.opacity = '1';
+          imgEl.style.transition = 'opacity .2s ease-out, transform .15s ease-out';
+        };
+        if (imgEl.complete) onImgReady();
+        else { imgEl.onload = onImgReady; imgEl.onerror = onImgReady; }
+        setupImageZoom(imgEl);
       } else {
-        media.innerHTML = `<iframe src="${src}" class="w-full h-[70vh] bg-white rounded-2xl"></iframe>`;
+        // KHÔNG nhúng iframe xem trước PDF nữa — trang xem PDF của Google Drive
+        // là cả 1 trang web con khá nặng (tải + chạy JS riêng), lướt qua lại
+        // nhiều lần giữa các PDF dễ làm điện thoại quá tải và đơ máy. Thay
+        // bằng 1 thẻ nhẹ, bấm nút mới thật sự mở trang Drive.
+        media.innerHTML = `
+          <div class="flex flex-col items-center justify-center gap-4 text-[#fff] px-6 text-center">
+            <div class="w-16 h-16 rounded-3xl bg-[#fff]/10 flex items-center justify-center">
+              <i data-lucide="file-text" class="w-8 h-8"></i>
+            </div>
+            <p class="text-xs text-slate-300 leading-relaxed">Xem PDF ngay trong app dễ gây nặng máy khi lướt qua nhiều file — bấm nút bên dưới để mở trong Google Drive.</p>
+            <a href="${downloadSrc}" target="_blank" class="px-4 py-2.5 bg-blue-500 hover:bg-blue-600 rounded-2xl text-xs font-bold flex items-center gap-2 transition">
+              <i data-lucide="external-link" class="w-4 h-4"></i> Mở PDF trong Drive
+            </a>
+          </div>
+        `;
       }
       lucide.createIcons();
     }
