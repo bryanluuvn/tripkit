@@ -260,7 +260,7 @@
   </div>
 
   <!-- MODAL QUẢN LÝ / TẠO CHUYẾN ĐI MỚI (TRIP MANAGER) -->
-  <div id="trip-manager-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+  <div id="trip-manager-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4" onclick="if(event.target===this) closeTripManagerModal()">
     <div class="max-w-sm w-full bg-white rounded-3xl p-5 space-y-4 shadow-2xl border border-slate-100 max-h-[85vh] flex flex-col justify-between">
       <div class="flex justify-between items-center border-b border-slate-100 pb-3">
         <h3 class="text-sm font-extrabold text-[var(--tk-text)] flex items-center gap-2">
@@ -293,7 +293,7 @@
   </div>
 
   <!-- MODAL EDIT DAY LOCATION -->
-  <div id="day-location-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+  <div id="day-location-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4" onclick="if(event.target===this) closeDayLocationModal()">
     <div class="max-w-sm w-full bg-white rounded-3xl p-5 space-y-4 shadow-2xl border border-slate-100">
       <div class="flex justify-between items-center border-b border-slate-100 pb-3">
         <h3 class="text-sm font-extrabold text-[var(--tk-text)]">Đổi địa điểm Ngày <span id="modal-day-num">1</span></h3>
@@ -311,7 +311,7 @@
   </div>
 
   <!-- MODAL OVERVIEW TOÀN BỘ LỊCH TRÌNH -->
-  <div id="overview-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+  <div id="overview-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4" onclick="if(event.target===this) closeOverviewModal()">
     <div class="max-w-sm w-full bg-white rounded-3xl p-5 space-y-3 shadow-2xl border border-slate-100 max-h-[85vh] flex flex-col">
       <div class="flex justify-between items-center border-b border-slate-100 pb-3 shrink-0">
         <h3 class="text-sm font-extrabold text-[var(--tk-text)] flex items-center gap-2"><i data-lucide="list-todo" class="w-4 h-4 text-blue-500"></i> Toàn bộ lịch trình</h3>
@@ -322,7 +322,7 @@
   </div>
 
   <!-- MODAL EDIT ACTIVITY -->
-  <div id="edit-act-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+  <div id="edit-act-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4" onclick="if(event.target===this) closeEditActModal()">
     <div class="max-w-sm w-full bg-white rounded-3xl p-5 space-y-4 shadow-2xl border border-slate-100">
       <div class="flex justify-between items-center border-b border-slate-100 pb-3">
         <h3 class="text-sm font-extrabold text-[var(--tk-text)]">Sửa hoạt động</h3>
@@ -378,7 +378,7 @@
   </div>
 
   <!-- MODAL EDIT TRIP -->
-  <div id="edit-trip-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+  <div id="edit-trip-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4" onclick="if(event.target===this) closeEditTripModal()">
     <div class="max-w-sm w-full bg-white rounded-3xl p-5 space-y-4 shadow-2xl border border-slate-100">
       <div class="flex justify-between items-center border-b border-slate-100 pb-3">
         <h3 class="text-sm font-extrabold text-[var(--tk-text)]">Cài đặt chuyến đi</h3>
@@ -405,7 +405,7 @@
   </div>
 
   <!-- MODAL VIEW DOCUMENT (Gallery + Zoom) -->
-  <div id="view-doc-modal" class="fixed inset-0 bg-slate-900/90 backdrop-blur-md z-50 hidden flex flex-col justify-between p-4">
+  <div id="view-doc-modal" class="fixed inset-0 bg-slate-900/90 backdrop-blur-md z-50 hidden flex flex-col justify-between p-4" onclick="if(event.target===this) closeDocModal()">
     <div class="flex justify-between items-center text-[#fff] pb-2 border-b border-slate-700">
       <div class="min-w-0">
         <h3 id="doc-modal-title" class="text-sm font-bold truncate max-w-[220px]">Xem giấy tờ</h3>
@@ -433,7 +433,7 @@
   </div>
 
   <!-- MODAL GOOGLE SHEETS WEB APP SYNC -->
-  <div id="sheets-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+  <div id="sheets-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4" onclick="if(event.target===this) closeSheetsModal()">
     <div class="max-w-sm w-full bg-white rounded-3xl p-5 space-y-4 shadow-2xl border border-slate-100 max-h-[85vh] overflow-y-auto">
       <div class="flex justify-between items-center border-b border-slate-100 pb-3">
         <h3 class="text-sm font-extrabold text-emerald-700 flex items-center gap-2">
@@ -472,7 +472,7 @@
   </div>
 
   <!-- MODAL SHARE QR & DATA -->
-  <div id="share-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+  <div id="share-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4" onclick="if(event.target===this) closeShareModal()">
     <div class="max-w-sm w-full bg-white rounded-3xl p-5 space-y-4 shadow-2xl border border-slate-100 text-center">
       <div class="flex justify-between items-center border-b border-slate-100 pb-3 text-left">
         <h3 class="text-sm font-extrabold text-blue-700 flex items-center gap-2"><i data-lucide="qr-code" class="w-4 h-4"></i> Chia sẻ Lịch trình</h3>
