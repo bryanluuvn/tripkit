@@ -37,6 +37,12 @@
     }
   </script>
   <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script>
+    if (window.pdfjsLib) {
+      pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    }
+  </script>
   <style>
     :root { --tk-text: #171922; }
     .no-scrollbar::-webkit-scrollbar { display: none; }
@@ -1331,10 +1337,11 @@
       const hintEl = document.getElementById('doc-modal-hint');
       hintEl.innerText = doc.type.startsWith('image/')
         ? 'Nhấn giữ ảnh để lưu về máy, hoặc bấm "Tải về" để mở trang Drive • Nhấn đúp / chụm 2 ngón để phóng to'
-        : 'Nếu "Tải về" không phản hồi, nó sẽ mở trang Drive — dùng nút tải ở đó';
+        : 'Cuộn để xem các trang • Bấm "Tải về" để mở/lưu trong Google Drive';
 
       const media = document.getElementById('doc-modal-media');
       zoomState = { scale: 1, tx: 0, ty: 0 };
+      pdfLoadToken++; // huỷ tác vụ tải PDF cũ (nếu có) đang chạy dở khi chuyển sang xem file/ảnh khác
       if (doc.type.startsWith('image/')) {
         // Giảm từ 2000px xuống 1600px — vẫn đủ nét khi zoom trên điện thoại,
         // nhưng nhẹ hơn đáng kể (tải nhanh hơn, đỡ trông như "đơ" khi mạng chậm).
@@ -1356,22 +1363,77 @@
         else { imgEl.onload = onImgReady; imgEl.onerror = onImgReady; }
         setupImageZoom(imgEl);
       } else {
-        // KHÔNG nhúng iframe xem trước PDF nữa — trang xem PDF của Google Drive
-        // là cả 1 trang web con khá nặng (tải + chạy JS riêng), lướt qua lại
-        // nhiều lần giữa các PDF dễ làm điện thoại quá tải và đơ máy. Thay
-        // bằng 1 thẻ nhẹ, bấm nút mới thật sự mở trang Drive.
+        // Vẽ PDF trực tiếp bằng PDF.js (tải file qua backend base64, không phụ
+        // thuộc app Drive/tài khoản Google, và nhẹ hơn nhiều so với nhúng
+        // nguyên trang xem của Drive — tránh lặp lại lỗi đơ máy trước đây).
         media.innerHTML = `
-          <div class="flex flex-col items-center justify-center gap-4 text-[#fff] px-6 text-center">
-            <div class="w-16 h-16 rounded-3xl bg-[#fff]/10 flex items-center justify-center">
-              <i data-lucide="file-text" class="w-8 h-8"></i>
-            </div>
-            <p class="text-xs text-slate-300 leading-relaxed">Xem PDF ngay trong app dễ gây nặng máy khi lướt qua nhiều file — bấm nút bên dưới để mở trong Google Drive.</p>
-            <a href="${downloadSrc}" target="_blank" class="px-4 py-2.5 bg-blue-500 hover:bg-blue-600 rounded-2xl text-xs font-bold flex items-center gap-2 transition">
-              <i data-lucide="external-link" class="w-4 h-4"></i> Mở PDF trong Drive
-            </a>
+          <div id="pdf-loading" class="flex flex-col items-center gap-3 text-[#fff]">
+            <div class="w-8 h-8 border-[3px] border-slate-600 border-t-[#fff] rounded-full animate-spin"></div>
+            <p class="text-[11px] text-slate-400">Đang tải PDF...</p>
           </div>
+          <div id="pdf-pages-container" class="w-full h-full overflow-y-auto hidden space-y-3 px-1"></div>
         `;
+        const myToken = pdfLoadToken;
+        loadAndRenderPdf(doc, downloadSrc, myToken);
       }
+      lucide.createIcons();
+    }
+
+    let pdfLoadToken = 0; // chặn kết quả tải PDF cũ (đến muộn) vẽ nhầm vào file đang xem, nếu lướt nhanh qua nhiều PDF
+
+    async function loadAndRenderPdf(doc, fallbackUrl, myToken) {
+      if (!doc.driveFileId || !appState.backendUrl || !window.pdfjsLib) return showPdfFallback(fallbackUrl, myToken);
+      try {
+        const url = appState.backendUrl + (appState.backendUrl.includes('?') ? '&' : '?') + 'action=getFileBase64&fileId=' + encodeURIComponent(doc.driveFileId);
+        const res = await fetch(url);
+        const result = await res.json();
+        if (myToken !== pdfLoadToken) return; // đã chuyển sang xem file khác — bỏ kết quả này
+        if (!result.success) return showPdfFallback(fallbackUrl, myToken);
+
+        const raw = atob(result.base64);
+        const bytes = new Uint8Array(raw.length);
+        for (let i = 0; i < raw.length; i++) bytes[i] = raw.charCodeAt(i);
+
+        const pdf = await pdfjsLib.getDocument({ data: bytes }).promise;
+        if (myToken !== pdfLoadToken) return;
+        const container = document.getElementById('pdf-pages-container');
+        if (!container) return; // khung đã bị thay bằng nội dung khác
+        container.innerHTML = '';
+        for (let p = 1; p <= pdf.numPages; p++) {
+          const page = await pdf.getPage(p);
+          if (myToken !== pdfLoadToken) return;
+          const viewport = page.getViewport({ scale: 1.5 });
+          const canvas = document.createElement('canvas');
+          canvas.width = viewport.width;
+          canvas.height = viewport.height;
+          canvas.className = 'w-full h-auto rounded-xl shadow-lg';
+          await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
+          if (myToken !== pdfLoadToken) return;
+          container.appendChild(canvas);
+        }
+        const loadingEl = document.getElementById('pdf-loading');
+        if (loadingEl) loadingEl.classList.add('hidden');
+        container.classList.remove('hidden');
+      } catch (err) {
+        if (myToken === pdfLoadToken) showPdfFallback(fallbackUrl, myToken);
+      }
+    }
+
+    function showPdfFallback(fallbackUrl, myToken) {
+      if (myToken !== undefined && myToken !== pdfLoadToken) return; // tránh ghi đè lên file đang xem hiện tại
+      const media = document.getElementById('doc-modal-media');
+      if (!media) return;
+      media.innerHTML = `
+        <div class="flex flex-col items-center justify-center gap-4 text-[#fff] px-6 text-center">
+          <div class="w-16 h-16 rounded-3xl bg-[#fff]/10 flex items-center justify-center">
+            <i data-lucide="file-text" class="w-8 h-8"></i>
+          </div>
+          <p class="text-xs text-slate-300 leading-relaxed">Không xem trước được PDF này trong app — mở trong Google Drive nhé.</p>
+          <a href="${fallbackUrl}" target="_blank" class="px-4 py-2.5 bg-blue-500 hover:bg-blue-600 rounded-2xl text-xs font-bold flex items-center gap-2 transition">
+            <i data-lucide="external-link" class="w-4 h-4"></i> Mở PDF trong Drive
+          </a>
+        </div>
+      `;
       lucide.createIcons();
     }
 
