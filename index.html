@@ -199,12 +199,31 @@
           <h2 class="text-base font-extrabold text-[var(--tk-text)]">Ví Giấy tờ & File</h2>
           
           <div class="space-y-2.5">
-            <input type="text" id="doc-custom-name" placeholder="Tên giấy tờ (VD: Vé máy bay, CCCD...)" class="w-full bg-slate-50/80 border border-slate-200/80 rounded-2xl px-3.5 py-3 text-xs font-medium outline-none focus:bg-white focus:border-blue-500">
+            <div class="grid grid-cols-2 gap-2">
+              <input type="text" id="doc-custom-name" placeholder="Tên giấy tờ (VD: Vé máy bay, CCCD...)" class="bg-slate-50/80 border border-slate-200/80 rounded-2xl px-3.5 py-3 text-xs font-medium outline-none focus:bg-white focus:border-blue-500">
+              <select id="doc-category" class="bg-slate-50/80 border border-slate-200/80 rounded-2xl px-3 py-3 text-xs font-semibold outline-none focus:bg-white focus:border-blue-500">
+                <option value="TICKET">🎫 Vé</option>
+                <option value="ID">🪪 Giấy tờ tuỳ thân</option>
+                <option value="BOOKING">🏨 Đặt phòng</option>
+                <option value="OTHER">📄 Khác</option>
+              </select>
+            </div>
             <label class="w-full bg-slate-900 hover:bg-black text-[#fff] py-3 rounded-2xl text-xs font-bold shadow-sm flex items-center justify-center gap-2 cursor-pointer transition active:scale-[0.99]">
               <i data-lucide="upload-cloud" class="w-4 h-4"></i> Tải ảnh / PDF giấy tờ
               <input type="file" id="doc-file-input" accept="image/*,application/pdf" onchange="uploadDocument(event)" class="hidden">
             </label>
           </div>
+        </div>
+
+        <!-- Filter + Sắp xếp -->
+        <div class="flex items-center gap-2">
+          <div class="flex-1 flex gap-1.5 overflow-x-auto no-scrollbar" id="doc-filter-chips"></div>
+          <select id="doc-sort" onchange="setDocSort(this.value)" class="bg-white border border-slate-200/80 rounded-2xl px-2.5 py-2 text-[10px] font-bold text-slate-600 outline-none shrink-0">
+            <option value="NEWEST">Mới nhất</option>
+            <option value="OLDEST">Cũ nhất</option>
+            <option value="NAME">Tên A-Z</option>
+            <option value="CATEGORY">Danh mục</option>
+          </select>
         </div>
 
         <div id="documents-grid" class="grid grid-cols-2 gap-3"></div>
@@ -231,8 +250,20 @@
           </div>
         </div>
 
+        <!-- Filter + Sắp xếp -->
+        <div class="flex items-center gap-2">
+          <div class="flex-1 flex gap-1.5 overflow-x-auto no-scrollbar" id="util-filter-chips"></div>
+          <select id="util-sort" onchange="setUtilSort(this.value)" class="bg-white border border-slate-200/80 rounded-2xl px-2.5 py-2 text-[10px] font-bold text-slate-600 outline-none shrink-0">
+            <option value="NEWEST">Mới nhất</option>
+            <option value="OLDEST">Cũ nhất</option>
+            <option value="NAME">Tên A-Z</option>
+            <option value="CATEGORY">Danh mục</option>
+          </select>
+        </div>
+
         <div id="utilities-list" class="space-y-3"></div>
       </section>
+
 
     </main>
 
@@ -395,6 +426,65 @@
     </div>
   </div>
 
+  <!-- MODAL EDIT DOCUMENT -->
+  <div id="edit-doc-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4" onclick="if(event.target===this) closeEditDocModal()">
+    <div class="max-w-sm w-full bg-white rounded-3xl p-5 space-y-4 shadow-2xl border border-slate-100">
+      <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+        <h3 class="text-sm font-extrabold text-[var(--tk-text)]">Sửa giấy tờ</h3>
+        <button onclick="closeEditDocModal()" class="p-1 text-slate-400 hover:text-slate-600"><i data-lucide="x" class="w-5 h-5"></i></button>
+      </div>
+      <input type="hidden" id="edit-doc-id">
+      <div class="space-y-3">
+        <div>
+          <label class="text-[11px] font-bold text-slate-500 block mb-1">Tên giấy tờ</label>
+          <input type="text" id="edit-doc-name" class="w-full bg-slate-50 border border-slate-200/80 rounded-2xl p-3 text-xs font-medium outline-none focus:bg-white focus:border-blue-500">
+        </div>
+        <div>
+          <label class="text-[11px] font-bold text-slate-500 block mb-1">Danh mục</label>
+          <select id="edit-doc-category" class="w-full bg-slate-50 border border-slate-200/80 rounded-2xl p-3 text-xs font-semibold outline-none focus:bg-white focus:border-blue-500">
+            <option value="TICKET">🎫 Vé</option>
+            <option value="ID">🪪 Giấy tờ tuỳ thân</option>
+            <option value="BOOKING">🏨 Đặt phòng</option>
+            <option value="OTHER">📄 Khác</option>
+          </select>
+        </div>
+      </div>
+      <button onclick="saveDocumentEdit()" class="w-full bg-blue-600 text-[#fff] py-3.5 rounded-2xl font-bold text-xs shadow-md shadow-blue-500/20">Cập nhật</button>
+    </div>
+  </div>
+
+  <!-- MODAL EDIT UTILITY -->
+  <div id="edit-util-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4" onclick="if(event.target===this) closeEditUtilModal()">
+    <div class="max-w-sm w-full bg-white rounded-3xl p-5 space-y-4 shadow-2xl border border-slate-100">
+      <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+        <h3 class="text-sm font-extrabold text-[var(--tk-text)]">Sửa tiện ích</h3>
+        <button onclick="closeEditUtilModal()" class="p-1 text-slate-400 hover:text-slate-600"><i data-lucide="x" class="w-5 h-5"></i></button>
+      </div>
+      <input type="hidden" id="edit-util-id">
+      <div class="space-y-3">
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="text-[11px] font-bold text-slate-500 block mb-1">Tên tiện ích</label>
+            <input type="text" id="edit-util-title" class="w-full bg-slate-50 border border-slate-200/80 rounded-2xl p-3 text-xs font-medium outline-none focus:bg-white focus:border-blue-500">
+          </div>
+          <div>
+            <label class="text-[11px] font-bold text-slate-500 block mb-1">Danh mục</label>
+            <select id="edit-util-category" class="w-full bg-slate-50 border border-slate-200/80 rounded-2xl p-3 text-xs font-semibold outline-none focus:bg-white focus:border-blue-500">
+              <option value="NOTE">📝 Ghi nhớ / Pass</option>
+              <option value="PHONE">📞 Số điện thoại</option>
+              <option value="LINK">🌐 Liên kết Web</option>
+            </select>
+          </div>
+        </div>
+        <div>
+          <label class="text-[11px] font-bold text-slate-500 block mb-1">Nội dung</label>
+          <input type="text" id="edit-util-desc" class="w-full bg-slate-50 border border-slate-200/80 rounded-2xl p-3 text-xs font-medium outline-none focus:bg-white focus:border-blue-500">
+        </div>
+      </div>
+      <button onclick="saveUtilityEdit()" class="w-full bg-blue-600 text-[#fff] py-3.5 rounded-2xl font-bold text-xs shadow-md shadow-blue-500/20">Cập nhật</button>
+    </div>
+  </div>
+
   <!-- MODAL EDIT TRIP -->
   <div id="edit-trip-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4" onclick="if(event.target===this) closeEditTripModal()">
     <div class="max-w-sm w-full bg-white rounded-3xl p-5 space-y-4 shadow-2xl border border-slate-100">
@@ -498,6 +588,83 @@
     /* TOAST & CONFIRM — thay cho alert()/confirm() gốc của trình duyệt (xấu, chặn UI) */
     // ID cho các mục tạo mới trên máy — thêm số ngẫu nhiên phía sau Date.now()
     // để tránh trùng nếu 2 mục được tạo trong cùng 1 mili-giây.
+    /* GIẤY TỜ & TIỆN ÍCH — danh mục, lọc, sắp xếp */
+    const DOC_CATEGORIES = {
+      TICKET: { emoji: '🎫', label: 'Vé' },
+      ID: { emoji: '🪪', label: 'Giấy tờ' },
+      BOOKING: { emoji: '🏨', label: 'Đặt phòng' },
+      OTHER: { emoji: '📄', label: 'Khác' }
+    };
+    const UTIL_CATEGORIES = {
+      NOTE: { emoji: '📝', label: 'Ghi nhớ' },
+      PHONE: { emoji: '📞', label: 'SĐT' },
+      LINK: { emoji: '🌐', label: 'Link' }
+    };
+
+    // sort: NEWEST/OLDEST dựa vào id (tạo bằng genId()/Date.now() nên tăng dần theo thời gian tạo)
+    function sortItems(list, sort, nameGetter) {
+      const arr = [...list];
+      if (sort === 'NAME') arr.sort((a, b) => nameGetter(a).localeCompare(nameGetter(b)));
+      else if (sort === 'CATEGORY') arr.sort((a, b) => String(a.category || '').localeCompare(String(b.category || '')));
+      else if (sort === 'OLDEST') arr.sort((a, b) => a.id - b.id);
+      else arr.sort((a, b) => b.id - a.id); // NEWEST (mặc định)
+      return arr;
+    }
+
+    // Filter/sort là tuỳ chọn xem RIÊNG của máy này — lưu thẳng localStorage,
+    // không qua saveState()/setDirty() vì không cần đẩy lên Sheets.
+    function persistLocalOnly() { localStorage.setItem('TRAVEL_PRO_APP_V12', JSON.stringify(appState)); }
+    function setDocFilter(cat) { appState.docCategoryFilter = cat; persistLocalOnly(); render(); }
+    function setDocSort(sort) { appState.docSort = sort; persistLocalOnly(); render(); }
+    function setUtilFilter(cat) { appState.utilCategoryFilter = cat; persistLocalOnly(); render(); }
+    function setUtilSort(sort) { appState.utilSort = sort; persistLocalOnly(); render(); }
+
+    function openEditDocModal(id) {
+      const trip = getCurrentTrip();
+      const doc = trip.documents.find(d => d.id === id);
+      if (!doc) return;
+      document.getElementById('edit-doc-id').value = doc.id;
+      document.getElementById('edit-doc-name').value = doc.name;
+      document.getElementById('edit-doc-category').value = doc.category || 'OTHER';
+      document.getElementById('edit-doc-modal').classList.remove('hidden');
+    }
+    function closeEditDocModal() { document.getElementById('edit-doc-modal').classList.add('hidden'); }
+    function saveDocumentEdit() {
+      const trip = getCurrentTrip();
+      const id = Number(document.getElementById('edit-doc-id').value);
+      const doc = trip.documents.find(d => d.id === id);
+      if (doc) {
+        doc.name = document.getElementById('edit-doc-name').value.trim() || doc.name;
+        doc.category = document.getElementById('edit-doc-category').value;
+        saveState();
+      }
+      closeEditDocModal();
+    }
+
+    function openEditUtilModal(id) {
+      const trip = getCurrentTrip();
+      const u = trip.utilities.find(x => x.id === id);
+      if (!u) return;
+      document.getElementById('edit-util-id').value = u.id;
+      document.getElementById('edit-util-title').value = u.title;
+      document.getElementById('edit-util-category').value = u.category;
+      document.getElementById('edit-util-desc').value = String(u.desc == null ? '' : u.desc);
+      document.getElementById('edit-util-modal').classList.remove('hidden');
+    }
+    function closeEditUtilModal() { document.getElementById('edit-util-modal').classList.add('hidden'); }
+    function saveUtilityEdit() {
+      const trip = getCurrentTrip();
+      const id = Number(document.getElementById('edit-util-id').value);
+      const u = trip.utilities.find(x => x.id === id);
+      if (u) {
+        u.title = document.getElementById('edit-util-title').value.trim() || u.title;
+        u.category = document.getElementById('edit-util-category').value;
+        u.desc = document.getElementById('edit-util-desc').value.trim();
+        saveState();
+      }
+      closeEditUtilModal();
+    }
+
     function genId() { return Date.now() + Math.floor(Math.random() * 1000); }
     function showToast(message, type) {
       type = type || 'success';
@@ -550,6 +717,13 @@
       backendUrl: DEFAULT_BACKEND_URL,
       sheetViewUrl: '',
       lastKnownUpdatedAt: '',
+      // Filter/sắp xếp cho tab Giấy tờ & Tiện ích — CHỈ lưu trên máy này (nằm
+      // ngoài appState.trips nên không bị đẩy/tải qua Sheets, giống cách
+      // currentDay/priorityFilter được cách ly khỏi đồng bộ).
+      docCategoryFilter: 'ALL',
+      docSort: 'NEWEST',
+      utilCategoryFilter: 'ALL',
+      utilSort: 'NEWEST',
       trips: [
         {
           id: 1,
@@ -576,6 +750,14 @@
       appState.backendUrl = DEFAULT_BACKEND_URL;
       appState.sheetViewUrl = ''; // xoá cache link Sheet cũ, để app tự lấy lại link mới
     }
+    if (!appState.docCategoryFilter) appState.docCategoryFilter = 'ALL';
+    if (!appState.docSort) appState.docSort = 'NEWEST';
+    if (!appState.utilCategoryFilter) appState.utilCategoryFilter = 'ALL';
+    if (!appState.utilSort) appState.utilSort = 'NEWEST';
+    // Giấy tờ tạo trước khi có tính năng danh mục — gán mặc định "Khác" để không rỗng.
+    appState.trips.forEach(t => {
+      (t.documents || []).forEach(d => { if (!d.category) d.category = 'OTHER'; });
+    });
 
     function getCurrentTrip() {
       let trip = appState.trips.find(t => t.id === appState.activeTripId);
@@ -1052,6 +1234,7 @@
       if (!file) return;
       const customName = document.getElementById('doc-custom-name').value.trim();
       const docName = customName || file.name;
+      const category = document.getElementById('doc-category').value;
       const reader = new FileReader();
       reader.onload = async function(e) {
         const base64 = e.target.result;
@@ -1065,7 +1248,7 @@
             });
             const result = await res.json();
             if (result.success) {
-              trip.documents.push({ id: genId(), name: docName, type: file.type, driveUrl: result.driveUrl, driveFileId: result.driveFileId });
+              trip.documents.push({ id: genId(), name: docName, type: file.type, category, driveUrl: result.driveUrl, driveFileId: result.driveFileId });
               saveState();
               return;
             }
@@ -1077,7 +1260,7 @@
           showToast('Chưa cấu hình backend nên file chỉ lưu trên máy này. Vào nút 🗂️ để cấu hình.', 'info');
         }
         // Fallback: lưu local nếu chưa cấu hình backend hoặc upload Drive thất bại
-        trip.documents.push({ id: genId(), name: docName, type: file.type, data: base64 });
+        trip.documents.push({ id: genId(), name: docName, type: file.type, category, data: base64 });
         saveState();
       };
       reader.readAsDataURL(file);
@@ -1315,7 +1498,7 @@
       return trips.map(t => ({
         ...t,
         documents: (t.documents || []).map(d => ({
-          id: d.id, name: d.name, type: d.type, driveUrl: d.driveUrl || null, driveFileId: d.driveFileId || null
+          id: d.id, name: d.name, type: d.type, category: d.category || 'OTHER', driveUrl: d.driveUrl || null, driveFileId: d.driveFileId || null
         }))
       }));
     }
@@ -1618,27 +1801,47 @@
         });
       }
 
-      // Documents
+      // Documents — filter chip theo danh mục
+      const docFilterContainer = document.getElementById('doc-filter-chips');
+      const docCatCounts = { ALL: (trip.documents || []).length };
+      Object.keys(DOC_CATEGORIES).forEach(k => { docCatCounts[k] = (trip.documents || []).filter(d => (d.category || 'OTHER') === k).length; });
+      docFilterContainer.innerHTML = ['ALL', ...Object.keys(DOC_CATEGORIES)].map(key => {
+        const isActive = appState.docCategoryFilter === key;
+        const label = key === 'ALL' ? 'Tất cả' : `${DOC_CATEGORIES[key].emoji} ${DOC_CATEGORIES[key].label}`;
+        return `<button onclick="setDocFilter('${key}')" class="px-3 py-1.5 rounded-full text-[10px] font-bold shrink-0 border transition ${
+          isActive ? 'bg-blue-500 border-blue-500 text-[#fff]' : 'bg-white border-slate-200/80 text-slate-500 hover:border-blue-500'
+        }">${label} (${docCatCounts[key] || 0})</button>`;
+      }).join('');
+      document.getElementById('doc-sort').value = appState.docSort;
+
+      let docsToShow = (trip.documents || []).filter(d => appState.docCategoryFilter === 'ALL' || (d.category || 'OTHER') === appState.docCategoryFilter);
+      docsToShow = sortItems(docsToShow, appState.docSort, d => d.name);
+
       const docGrid = document.getElementById('documents-grid');
       docGrid.innerHTML = '';
-      if (!trip.documents || trip.documents.length === 0) {
-        docGrid.innerHTML = `<div class="col-span-2 text-center py-10 bg-white rounded-3xl border border-slate-200/60 text-xs font-bold text-slate-400">Ví rỗng.</div>`;
+      if (docsToShow.length === 0) {
+        docGrid.innerHTML = `<div class="col-span-2 text-center py-10 bg-white rounded-3xl border border-slate-200/60 text-xs font-bold text-slate-400">${(trip.documents || []).length === 0 ? 'Ví rỗng.' : 'Không có giấy tờ nào khớp bộ lọc.'}</div>`;
       } else {
-        trip.documents.forEach(doc => {
+        docsToShow.forEach(doc => {
           const isImg = doc.type.startsWith('image/');
           const src = doc.driveUrl || doc.data;
           // Lưới chỉ hiển thị ảnh nhỏ (~300px) thay vì bản full 2000px dùng để
           // zoom — tránh giải mã nhiều ảnh siêu nặng cùng lúc gây đơ khi cuộn.
           const thumbSrc = src && src.includes('drive.google.com/thumbnail') ? src.replace(/sz=w\d+/, 'sz=w300') : src;
+          const cat = DOC_CATEGORIES[doc.category] || DOC_CATEGORIES.OTHER;
           docGrid.innerHTML += `
             <div class="bg-white rounded-3xl p-3.5 border border-slate-200/60 shadow-sm space-y-2.5 flex flex-col justify-between">
               <div class="aspect-video bg-slate-100 rounded-2xl overflow-hidden flex items-center justify-center border border-slate-100 cursor-pointer relative" onclick="openDocModal(${doc.id})">
                 ${isImg ? `<img src="${thumbSrc}" loading="lazy" class="w-full h-full object-cover">` : `<i data-lucide="file-text" class="w-8 h-8 text-blue-600"></i>`}
                 ${doc.driveUrl ? `<span class="absolute top-1.5 right-1.5 bg-emerald-500 text-[#fff] text-[8px] font-bold px-1.5 py-0.5 rounded-lg flex items-center gap-0.5"><i data-lucide="cloud" class="w-2.5 h-2.5"></i></span>` : ''}
               </div>
-              <p class="text-xs font-extrabold text-slate-800 truncate" title="${doc.name}">${doc.name}</p>
+              <div class="space-y-1">
+                <span class="text-[9px] font-bold text-slate-500">${cat.emoji} ${cat.label}</span>
+                <p class="text-xs font-extrabold text-slate-800 truncate" title="${doc.name}">${doc.name}</p>
+              </div>
               <div class="flex gap-1.5">
                 <button onclick="openDocModal(${doc.id})" class="flex-1 py-2 bg-blue-50 hover:bg-blue-100 rounded-full text-[10px] font-bold text-blue-600 text-center transition">Xem & Tải</button>
+                <button onclick="openEditDocModal(${doc.id})" class="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:text-blue-600 hover:bg-slate-50 transition shrink-0"><i data-lucide="edit-2" class="w-3.5 h-3.5"></i></button>
                 <button onclick="deleteDocument(${doc.id})" class="w-8 h-8 rounded-full flex items-center justify-center bg-rose-50 hover:bg-rose-100 text-rose-600 transition shrink-0"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
               </div>
             </div>
@@ -1646,11 +1849,29 @@
         });
       }
 
-      // Utilities
+      // Utilities — filter chip theo danh mục
+      if (!trip.utilities) trip.utilities = [];
+      const utilFilterContainer = document.getElementById('util-filter-chips');
+      const utilCatCounts = { ALL: trip.utilities.length };
+      Object.keys(UTIL_CATEGORIES).forEach(k => { utilCatCounts[k] = trip.utilities.filter(u => u.category === k).length; });
+      utilFilterContainer.innerHTML = ['ALL', ...Object.keys(UTIL_CATEGORIES)].map(key => {
+        const isActive = appState.utilCategoryFilter === key;
+        const label = key === 'ALL' ? 'Tất cả' : `${UTIL_CATEGORIES[key].emoji} ${UTIL_CATEGORIES[key].label}`;
+        return `<button onclick="setUtilFilter('${key}')" class="px-3 py-1.5 rounded-full text-[10px] font-bold shrink-0 border transition ${
+          isActive ? 'bg-blue-500 border-blue-500 text-[#fff]' : 'bg-white border-slate-200/80 text-slate-500 hover:border-blue-500'
+        }">${label} (${utilCatCounts[key] || 0})</button>`;
+      }).join('');
+      document.getElementById('util-sort').value = appState.utilSort;
+
+      let utilsToShow = trip.utilities.filter(u => appState.utilCategoryFilter === 'ALL' || u.category === appState.utilCategoryFilter);
+      utilsToShow = sortItems(utilsToShow, appState.utilSort, u => u.title);
+
       const utilList = document.getElementById('utilities-list');
       utilList.innerHTML = '';
-      if (!trip.utilities) trip.utilities = [];
-      trip.utilities.forEach(u => {
+      if (utilsToShow.length === 0) {
+        utilList.innerHTML = `<div class="text-center py-10 bg-white rounded-3xl border border-slate-200/60 text-xs font-bold text-slate-400">${trip.utilities.length === 0 ? 'Chưa có tiện ích nào.' : 'Không có tiện ích nào khớp bộ lọc.'}</div>`;
+      }
+      utilsToShow.forEach(u => {
         let contentHtml = '';
         const descStr = String(u.desc == null ? '' : u.desc); // ép string phòng dữ liệu lỗi (VD Sheets tự đổi số điện thoại thành số)
         if (u.category === 'LINK') {
@@ -1670,6 +1891,7 @@
             </div>
             <div class="flex items-center gap-1 shrink-0">
               <button onclick="copyToClipboard('${descStr.replace(/'/g, "\\'")}', this)" class="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:text-blue-600 hover:bg-slate-50 transition"><i data-lucide="copy" class="w-4 h-4"></i></button>
+              <button onclick="openEditUtilModal(${u.id})" class="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:text-blue-600 hover:bg-slate-50 transition"><i data-lucide="edit-2" class="w-4 h-4"></i></button>
               <button onclick="deleteUtility(${u.id})" class="w-8 h-8 rounded-full flex items-center justify-center text-slate-300 hover:text-rose-500 hover:bg-rose-50 transition"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
             </div>
           </div>
