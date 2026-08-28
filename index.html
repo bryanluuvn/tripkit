@@ -37,7 +37,6 @@
     }
   </script>
   <script src="https://unpkg.com/lucide@latest"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <style>
     :root { --tk-text: #171922; }
     .no-scrollbar::-webkit-scrollbar { display: none; }
@@ -147,11 +146,11 @@
             <button onclick="setPriorityFilter('BACKUP')" id="pfilter-BACKUP" class="flex-1 py-2 rounded-xl text-slate-500 hover:text-[var(--tk-text)] transition">Dự phòng</button>
           </div>
 
-          <button onclick="openDayMap()" title="Bản đồ ngày" class="px-3.5 py-2.5 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-[#fff] font-bold text-xs rounded-2xl shadow-sm shadow-emerald-600/20 flex items-center gap-1.5 transition shrink-0">
-            <i data-lucide="map" class="w-4 h-4"></i>
+          <button onclick="openDayMap()" class="px-3 py-2.5 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-[#fff] font-bold text-[10px] rounded-2xl shadow-sm shadow-emerald-600/20 flex items-center gap-1 transition shrink-0">
+            <i data-lucide="map" class="w-3.5 h-3.5"></i> Bản đồ
           </button>
-          <button onclick="openOverviewModal()" title="Xem toàn bộ lịch trình" class="px-3.5 py-2.5 bg-white border border-slate-200/80 hover:border-blue-500 active:scale-95 text-slate-600 font-bold text-xs rounded-2xl shadow-sm flex items-center gap-1.5 transition shrink-0">
-            <i data-lucide="list-todo" class="w-4 h-4"></i>
+          <button onclick="openOverviewModal()" class="px-3 py-2.5 bg-white border border-slate-200/80 hover:border-blue-500 active:scale-95 text-slate-600 font-bold text-[10px] rounded-2xl shadow-sm flex items-center gap-1 transition shrink-0">
+            <i data-lucide="list-todo" class="w-3.5 h-3.5"></i> Tổng quan
           </button>
         </div>
 
@@ -237,6 +236,9 @@
 
     </main>
 
+    <!-- TOAST NOTIFICATIONS (thay cho alert() gốc của trình duyệt) -->
+    <div id="toast-container" class="fixed bottom-24 left-0 right-0 flex flex-col items-center gap-2 z-[60] pointer-events-none px-4"></div>
+
     <!-- BOTTOM NAVIGATION BAR -->
     <nav class="fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-xl border-t border-slate-200/60 px-6 py-3 z-40">
       <div class="max-w-md mx-auto flex justify-around items-center">
@@ -307,6 +309,22 @@
         </div>
       </div>
       <button onclick="saveDayLocation()" class="w-full bg-blue-600 text-[#fff] py-3.5 rounded-2xl font-bold text-xs shadow-md shadow-blue-500/20">Lưu & Cập nhật Thời tiết</button>
+    </div>
+  </div>
+
+  <!-- MODAL XÁC NHẬN (thay cho confirm() gốc, dùng chung cho mọi hành động xoá) -->
+  <div id="confirm-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[70] hidden flex items-center justify-center p-4" onclick="if(event.target===this) closeConfirmModal()">
+    <div class="max-w-xs w-full bg-white rounded-3xl p-5 space-y-4 shadow-2xl border border-slate-100">
+      <div class="flex items-start gap-3">
+        <div class="w-10 h-10 rounded-full bg-rose-50 text-rose-500 flex items-center justify-center shrink-0">
+          <i data-lucide="alert-triangle" class="w-5 h-5"></i>
+        </div>
+        <p id="confirm-modal-message" class="text-xs font-bold text-[var(--tk-text)] leading-relaxed pt-2"></p>
+      </div>
+      <div class="grid grid-cols-2 gap-2">
+        <button id="confirm-modal-cancel-btn" class="py-3 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold text-xs transition">Huỷ</button>
+        <button id="confirm-modal-ok-btn" class="py-3 rounded-2xl bg-rose-600 hover:bg-rose-700 text-[#fff] font-bold text-xs shadow-sm shadow-rose-600/20 transition">Xoá</button>
+      </div>
     </div>
   </div>
 
@@ -471,39 +489,67 @@
     </div>
   </div>
 
-  <!-- MODAL SHARE QR & DATA -->
-  <div id="share-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4" onclick="if(event.target===this) closeShareModal()">
-    <div class="max-w-sm w-full bg-white rounded-3xl p-5 space-y-4 shadow-2xl border border-slate-100 text-center">
-      <div class="flex justify-between items-center border-b border-slate-100 pb-3 text-left">
-        <h3 class="text-sm font-extrabold text-blue-700 flex items-center gap-2"><i data-lucide="qr-code" class="w-4 h-4"></i> Chia sẻ Lịch trình</h3>
-        <button onclick="closeShareModal()" class="p-1 text-slate-400 hover:text-slate-600"><i data-lucide="x" class="w-5 h-5"></i></button>
-      </div>
-      
-      <div class="flex justify-center p-3 bg-slate-50 rounded-2xl border border-slate-100">
-        <div id="qrcode-container" class="p-2 bg-white rounded-xl shadow-sm"></div>
-      </div>
-      <p class="text-[11px] text-slate-500 font-medium">Quét QR hoặc copy mã JSON để chia sẻ.</p>
-
-      <div class="space-y-2 text-left">
-        <textarea id="share-json-text" class="w-full h-20 bg-slate-50 border border-slate-200/80 rounded-2xl p-2.5 text-[10px] font-mono outline-none focus:bg-white focus:border-blue-500" placeholder="Mã dữ liệu JSON..."></textarea>
-        <div class="grid grid-cols-2 gap-2">
-          <button onclick="copyShareJson()" class="bg-slate-100 hover:bg-slate-200 text-slate-800 py-2.5 rounded-2xl font-bold text-xs">Copy JSON</button>
-          <button onclick="importShareJson()" class="bg-blue-600 hover:bg-blue-700 text-[#fff] py-2.5 rounded-2xl font-bold text-xs shadow-md shadow-blue-500/20">Nhập JSON</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
   <!-- JAVASCRIPT LOGIC -->
   <script>
     // URL Web App Apps Script mặc định — đã gắn sẵn, không cần nhập tay trong app nữa.
     // Muốn đổi sau này, chỉ cần sửa giá trị này trong file HTML.
     const DEFAULT_BACKEND_URL = 'https://script.google.com/macros/s/AKfycbzJJKHKpbOEFKJnb1TnzBZ-QeyY7ByGQw4PPeTCpoVDJkPBEkCfyTQ7arqiubW0460/exec';
 
+    /* TOAST & CONFIRM — thay cho alert()/confirm() gốc của trình duyệt (xấu, chặn UI) */
+    // ID cho các mục tạo mới trên máy — thêm số ngẫu nhiên phía sau Date.now()
+    // để tránh trùng nếu 2 mục được tạo trong cùng 1 mili-giây.
+    function genId() { return Date.now() + Math.floor(Math.random() * 1000); }
+    function showToast(message, type) {
+      type = type || 'success';
+      const colors = { success: 'bg-emerald-600', error: 'bg-rose-600', info: 'bg-slate-800' };
+      const container = document.getElementById('toast-container');
+      const el = document.createElement('div');
+      el.className = `${colors[type] || colors.info} text-[#fff] text-xs font-bold px-4 py-3 rounded-2xl shadow-lg shadow-black/10 max-w-[92%] text-center pointer-events-auto`;
+      el.style.opacity = '0';
+      el.style.transform = 'translateY(8px)';
+      el.style.transition = 'opacity .2s ease-out, transform .2s ease-out';
+      el.innerText = message;
+      container.appendChild(el);
+      requestAnimationFrame(() => { el.style.opacity = '1'; el.style.transform = 'translateY(0)'; });
+      setTimeout(() => {
+        el.style.opacity = '0';
+        el.style.transform = 'translateY(8px)';
+        setTimeout(() => el.remove(), 250);
+      }, 2600);
+    }
+
+    let _confirmCallback = null;
+    function showConfirm(message, onConfirm, opts) {
+      opts = opts || {};
+      document.getElementById('confirm-modal-message').innerText = message;
+      const okBtn = document.getElementById('confirm-modal-ok-btn');
+      const cancelBtn = document.getElementById('confirm-modal-cancel-btn');
+      okBtn.innerText = opts.okLabel || 'Xoá';
+      cancelBtn.innerText = opts.cancelLabel || 'Huỷ';
+      // Nút "Ghi đè" (force push) không phải hành động nguy hiểm màu đỏ như xoá — đổi màu cho hợp ngữ cảnh
+      okBtn.className = opts.tone === 'warning'
+        ? 'py-3 rounded-2xl bg-amber-500 hover:bg-amber-600 text-[#fff] font-bold text-xs shadow-sm shadow-amber-500/20 transition'
+        : 'py-3 rounded-2xl bg-rose-600 hover:bg-rose-700 text-[#fff] font-bold text-xs shadow-sm shadow-rose-600/20 transition';
+      _confirmCallback = onConfirm;
+      document.getElementById('confirm-modal').classList.remove('hidden');
+      lucide.createIcons();
+    }
+    function closeConfirmModal() {
+      document.getElementById('confirm-modal').classList.add('hidden');
+      _confirmCallback = null;
+    }
+    document.getElementById('confirm-modal-ok-btn').addEventListener('click', () => {
+      const cb = _confirmCallback;
+      closeConfirmModal();
+      if (cb) cb();
+    });
+    document.getElementById('confirm-modal-cancel-btn').addEventListener('click', closeConfirmModal);
+
     let appState = JSON.parse(localStorage.getItem('TRAVEL_PRO_APP_V12')) || {
       activeTripId: 1,
       backendUrl: DEFAULT_BACKEND_URL,
       sheetViewUrl: '',
+      lastKnownUpdatedAt: '',
       trips: [
         {
           id: 1,
@@ -638,7 +684,7 @@
             </div>
             <div class="flex items-center gap-1 shrink-0">
               <button onclick="switchTrip(${t.id})" class="px-2.5 py-1.5 bg-indigo-600 text-[#fff] font-bold text-[10px] rounded-xl shadow-sm hover:bg-indigo-700">Chọn</button>
-              ${appState.trips.length > 1 ? `<button onclick="deleteTrip(${t.id})" class="p-1.5 text-slate-400 hover:text-rose-600"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>` : ''}
+              ${appState.trips.length > 1 ? `<button onclick="deleteTrip(${t.id})" class="w-7 h-7 rounded-full flex items-center justify-center text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>` : ''}
             </div>
           </div>
         `;
@@ -660,14 +706,14 @@
       const days = Number(document.getElementById('new-trip-days').value) || 1;
       const startDate = document.getElementById('new-trip-startdate').value;
 
-      if (!title) return alert('Vui lòng nhập tên chuyến đi!');
+      if (!title) return showToast('Vui lòng nhập tên chuyến đi!', 'error');
 
       const dayLocations = {};
       for (let i = 1; i <= days; i++) {
         dayLocations[i] = defaultLoc;
       }
 
-      const newId = Date.now();
+      const newId = genId();
       const newTrip = {
         id: newId,
         tripTitle: title,
@@ -691,16 +737,16 @@
     }
 
     function deleteTrip(id) {
-      if (appState.trips.length <= 1) return alert('Không thể xóa chuyến đi duy nhất!');
-      if (!confirm('Bạn có chắc muốn xóa chuyến đi này?')) return;
-      
-      appState.trips = appState.trips.filter(t => t.id !== id);
-      if (appState.activeTripId === id) {
-        appState.activeTripId = appState.trips[0].id;
-      }
-      saveState();
-      renderTripList();
-      fetchWeatherForCurrentDay();
+      if (appState.trips.length <= 1) return showToast('Không thể xóa chuyến đi duy nhất!', 'error');
+      showConfirm('Bạn có chắc muốn xóa chuyến đi này? Toàn bộ hoạt động, giấy tờ và tiện ích của trip sẽ mất.', () => {
+        appState.trips = appState.trips.filter(t => t.id !== id);
+        if (appState.activeTripId === id) {
+          appState.activeTripId = appState.trips[0].id;
+        }
+        saveState();
+        renderTripList();
+        fetchWeatherForCurrentDay();
+      });
     }
 
     /* NAVIGATION */
@@ -745,8 +791,11 @@
 
     function deleteActivity(id) {
       const trip = getCurrentTrip();
-      trip.activities = trip.activities.filter(a => a.id !== id);
-      saveState();
+      const act = trip.activities.find(a => a.id === id);
+      showConfirm(`Xoá hoạt động "${act ? act.title : ''}"?`, () => {
+        trip.activities = trip.activities.filter(a => a.id !== id);
+        saveState();
+      });
     }
 
     function addActivity() {
@@ -758,10 +807,10 @@
       const priority = document.getElementById('act-priority').value;
       const note = document.getElementById('act-note').value.trim();
 
-      if (!title) return alert('Vui lòng nhập tên điểm đến!');
+      if (!title) return showToast('Vui lòng nhập tên điểm đến!', 'error');
 
       trip.activities.push({
-        id: Date.now(),
+        id: genId(),
         day: trip.currentDay,
         time: time || '09:00',
         title,
@@ -951,7 +1000,7 @@
       const dayActs = trip.activities.filter(a => a.day === trip.currentDay && a.location && a.location.trim() !== '');
       dayActs.sort((a, b) => (a.time || '00:00').localeCompare(b.time || '00:00'));
 
-      if (dayActs.length === 0) return alert('Chưa có địa điểm nào có địa chỉ trong ngày này!');
+      if (dayActs.length === 0) return showToast('Chưa có địa điểm nào có địa chỉ trong ngày này!', 'error');
 
       if (dayActs.length === 1) {
         window.open(buildMapHref(dayActs[0].location), '_blank');
@@ -983,7 +1032,7 @@
       const days = Number(document.getElementById('edit-trip-days').value) || 1;
       const startDate = document.getElementById('edit-trip-startdate').value;
 
-      if (!title) return alert('Nhập tên chuyến đi!');
+      if (!title) return showToast('Nhập tên chuyến đi!', 'error');
       trip.tripTitle = title;
       trip.totalDays = days;
       trip.startDate = startDate;
@@ -994,33 +1043,6 @@
       fetchWeatherForCurrentDay();
     }
 
-    /* QR & DATA SHARE */
-    function openShareModal() {
-      const jsonStr = JSON.stringify(appState);
-      document.getElementById('share-json-text').value = jsonStr;
-      
-      const container = document.getElementById('qrcode-container');
-      container.innerHTML = '';
-      new QRCode(container, { text: jsonStr, width: 140, height: 140 });
-
-      document.getElementById('share-modal').classList.remove('hidden');
-    }
-    function closeShareModal() { document.getElementById('share-modal').classList.add('hidden'); }
-    function copyShareJson() {
-      navigator.clipboard.writeText(document.getElementById('share-json-text').value).then(() => alert('Đã sao chép JSON!'));
-    }
-    function importShareJson() {
-      try {
-        const imported = JSON.parse(document.getElementById('share-json-text').value);
-        if (imported.trips) {
-          appState = imported;
-          saveState();
-          closeShareModal();
-          fetchWeatherForCurrentDay();
-          alert('Nhập dữ liệu thành công!');
-        } else alert('JSON không hợp lệ!');
-      } catch(e) { alert('Lỗi định dạng JSON!'); }
-    }
 
     /* DOCUMENTS — ảnh/PDF được tải lên Google Drive qua Apps Script backend
        để đối tác cũng thấy được khi Đồng bộ (localStorage chỉ có trên máy này). */
@@ -1043,37 +1065,40 @@
             });
             const result = await res.json();
             if (result.success) {
-              trip.documents.push({ id: Date.now(), name: docName, type: file.type, driveUrl: result.driveUrl, driveFileId: result.driveFileId });
+              trip.documents.push({ id: genId(), name: docName, type: file.type, driveUrl: result.driveUrl, driveFileId: result.driveFileId });
               saveState();
               return;
             }
-            alert('Tải lên Google Drive lỗi: ' + (result.error || 'không rõ') + '. File sẽ chỉ lưu trên máy này (đối tác sẽ không thấy).');
+            showToast('Tải lên Drive lỗi: ' + (result.error || 'không rõ') + '. File chỉ lưu trên máy này.', 'error');
           } catch (err) {
-            alert('Không kết nối được backend. File sẽ chỉ lưu trên máy này (đối tác sẽ không thấy).');
+            showToast('Không kết nối được backend. File chỉ lưu trên máy này.', 'error');
           }
         } else {
-          alert('Chưa cấu hình backend Google Sheets nên file chỉ lưu trên máy này — đối tác sẽ không thấy. Vào nút 🗂️ để cấu hình.');
+          showToast('Chưa cấu hình backend nên file chỉ lưu trên máy này. Vào nút 🗂️ để cấu hình.', 'info');
         }
         // Fallback: lưu local nếu chưa cấu hình backend hoặc upload Drive thất bại
-        trip.documents.push({ id: Date.now(), name: docName, type: file.type, data: base64 });
+        trip.documents.push({ id: genId(), name: docName, type: file.type, data: base64 });
         saveState();
       };
       reader.readAsDataURL(file);
     }
 
-    async function deleteDocument(id) {
+    function deleteDocument(id) {
       const trip = getCurrentTrip();
       const doc = trip.documents.find(d => d.id === id);
-      trip.documents = trip.documents.filter(d => d.id !== id);
-      saveState();
-      if (doc && doc.driveFileId && appState.backendUrl) {
-        try {
-          await fetch(appState.backendUrl, {
-            method: 'POST',
-            body: JSON.stringify({ action: 'deleteFile', driveFileId: doc.driveFileId })
-          });
-        } catch (err) { /* xoá local vẫn đã thành công, bỏ qua lỗi xoá trên Drive */ }
-      }
+      if (!doc) return;
+      showConfirm(`Xoá giấy tờ "${doc.name}"?`, async () => {
+        trip.documents = trip.documents.filter(d => d.id !== id);
+        saveState();
+        if (doc.driveFileId && appState.backendUrl) {
+          try {
+            await fetch(appState.backendUrl, {
+              method: 'POST',
+              body: JSON.stringify({ action: 'deleteFile', driveFileId: doc.driveFileId })
+            });
+          } catch (err) { /* xoá local vẫn đã thành công, bỏ qua lỗi xoá trên Drive */ }
+        }
+      });
     }
     /* XEM GIẤY TỜ — chế độ thư viện: vuốt trái/phải đổi ảnh, chụm/đúp chạm để zoom.
        Lưu ý: trên iOS khi Add to Home Screen, nút "Tải về" có thể không hoạt động
@@ -1202,16 +1227,19 @@
       const title = document.getElementById('util-title').value.trim();
       const category = document.getElementById('util-category').value;
       const desc = document.getElementById('util-desc').value.trim();
-      if (!title || !desc) return alert('Vui lòng điền đủ tên và nội dung!');
-      trip.utilities.push({ id: Date.now(), title, category, desc });
+      if (!title || !desc) return showToast('Vui lòng điền đủ tên và nội dung!', 'error');
+      trip.utilities.push({ id: genId(), title, category, desc });
       document.getElementById('util-title').value = '';
       document.getElementById('util-desc').value = '';
       saveState();
     }
     function deleteUtility(id) { 
       const trip = getCurrentTrip();
-      trip.utilities = trip.utilities.filter(u => u.id !== id); 
-      saveState(); 
+      const u = trip.utilities.find(x => x.id === id);
+      showConfirm(`Xoá tiện ích "${u ? u.title : ''}"?`, () => {
+        trip.utilities = trip.utilities.filter(x => x.id !== id);
+        saveState();
+      });
     }
     function copyToClipboard(text, btn) {
       navigator.clipboard.writeText(text).then(() => {
@@ -1300,12 +1328,35 @@
         const payload = { trips: sanitizeTripsForPush(appState.trips) };
         const res = await fetch(url, {
           method: 'POST',
-          body: JSON.stringify({ action: 'push', data: payload })
+          body: JSON.stringify({
+            action: 'push', data: payload,
+            lastKnownUpdatedAt: appState.lastKnownUpdatedAt || '',
+            force: !!opts.force
+          })
         });
         const result = await res.json();
         if (result.success) {
+          appState.lastKnownUpdatedAt = result.updatedAt || appState.lastKnownUpdatedAt;
           setSyncStatus((opts.silent ? 'Đã tự động đồng bộ lúc ' : 'Đẩy dữ liệu thành công lúc ') + new Date().toLocaleTimeString('vi-VN'));
           updateSyncDot(true);
+        } else if (result.conflict) {
+          // Có máy khác đã đẩy lên sau lần tải gần nhất của mình — KHÔNG tự
+          // ý ghi đè. Nếu đang tự động chạy nền, chỉ báo nhẹ bằng toast; nếu
+          // người dùng chủ động bấm "Đẩy lên", hỏi rõ có muốn vẫn ghi đè không.
+          setSyncStatus('⚠️ Có xung đột đồng bộ — chưa đẩy lên.');
+          updateSyncDot(false);
+          if (opts.silent) {
+            showToast('⚠️ Đối tác vừa cập nhật dữ liệu mới. Vào mục 🗂️ để xử lý đồng bộ.', 'error');
+          } else {
+            showConfirm(
+              'Đối tác vừa đồng bộ dữ liệu mới hơn trên Sheets. Đẩy lên bây giờ sẽ GHI ĐÈ mất thay đổi đó của họ.',
+              async () => {
+                const forced = await doPush(url, { silent: false, force: true });
+                if (forced.success) showToast('Đã ghi đè và đẩy dữ liệu lên thành công!', 'success');
+              },
+              { okLabel: 'Vẫn ghi đè', cancelLabel: 'Để tôi tải về trước', tone: 'warning' }
+            );
+          }
         } else {
           setSyncStatus('Lỗi đồng bộ: ' + (result.error || 'không rõ'));
           updateSyncDot(false);
@@ -1345,6 +1396,7 @@
           if (!appState.trips.find(t => t.id === appState.activeTripId)) {
             appState.activeTripId = appState.trips[0].id;
           }
+          appState.lastKnownUpdatedAt = result.updatedAt || appState.lastKnownUpdatedAt;
           saveState();
           fetchWeatherForCurrentDay();
           isApplyingRemoteData = false;
@@ -1363,7 +1415,7 @@
 
     async function pushToSheets() {
       const url = (document.getElementById('backend-url').value || appState.backendUrl || '').trim();
-      if (!url) return alert('Vui lòng nhập URL Web App Apps Script!');
+      if (!url) return showToast('Vui lòng nhập URL Web App Apps Script!', 'error');
       appState.backendUrl = url;
       localStorage.setItem('TRAVEL_PRO_APP_V12', JSON.stringify(appState));
       if (!appState.sheetViewUrl) fetchSheetMeta(url);
@@ -1372,15 +1424,16 @@
       isSyncing = false;
       if (result.success) {
         setDirty(false);
-        alert('Đã đẩy dữ liệu lên Google Sheets thành công!');
-      } else {
-        alert('Đẩy dữ liệu thất bại: ' + (result.error || 'Lỗi không xác định'));
+        showToast('Đã đẩy dữ liệu lên Google Sheets thành công!', 'success');
+      } else if (!result.conflict) {
+        // Xung đột đã được doPush() tự xử lý (hiện modal xác nhận riêng) — không báo trùng ở đây.
+        showToast('Đẩy dữ liệu thất bại: ' + (result.error || 'Lỗi không xác định'), 'error');
       }
     }
 
     async function pullFromSheets() {
       const url = (document.getElementById('backend-url').value || appState.backendUrl || '').trim();
-      if (!url) return alert('Vui lòng nhập URL Web App Apps Script!');
+      if (!url) return showToast('Vui lòng nhập URL Web App Apps Script!', 'error');
       appState.backendUrl = url;
       localStorage.setItem('TRAVEL_PRO_APP_V12', JSON.stringify(appState));
       isSyncing = true;
@@ -1388,11 +1441,11 @@
       isSyncing = false;
       if (result.success && result.data && Array.isArray(result.data.trips) && result.data.trips.length > 0) {
         closeSheetsModal();
-        alert('Đã tải dữ liệu mới nhất từ Google Sheets!');
+        showToast('Đã tải dữ liệu mới nhất từ Google Sheets!', 'success');
       } else if (result.success) {
-        alert('Chưa có dữ liệu nào trên Google Sheets. Hãy "Đẩy lên" trước.');
+        showToast('Chưa có dữ liệu nào trên Google Sheets. Hãy "Đẩy lên" trước.', 'info');
       } else {
-        alert('Không kết nối được backend. Kiểm tra lại URL và quyền deploy (Anyone) của Apps Script.');
+        showToast('Không kết nối được backend. Kiểm tra lại URL và quyền deploy (Anyone) của Apps Script.', 'error');
       }
     }
 
@@ -1585,8 +1638,8 @@
               </div>
               <p class="text-xs font-extrabold text-slate-800 truncate" title="${doc.name}">${doc.name}</p>
               <div class="flex gap-1.5">
-                <button onclick="openDocModal(${doc.id})" class="flex-1 py-2 bg-blue-50 hover:bg-blue-100 rounded-xl text-[10px] font-bold text-blue-600 text-center transition">Xem & Tải</button>
-                <button onclick="deleteDocument(${doc.id})" class="p-2 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-xl text-[10px] font-bold transition"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
+                <button onclick="openDocModal(${doc.id})" class="flex-1 py-2 bg-blue-50 hover:bg-blue-100 rounded-full text-[10px] font-bold text-blue-600 text-center transition">Xem & Tải</button>
+                <button onclick="deleteDocument(${doc.id})" class="w-8 h-8 rounded-full flex items-center justify-center bg-rose-50 hover:bg-rose-100 text-rose-600 transition shrink-0"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
               </div>
             </div>
           `;
@@ -1616,8 +1669,8 @@
               ${contentHtml}
             </div>
             <div class="flex items-center gap-1 shrink-0">
-              <button onclick="copyToClipboard('${descStr.replace(/'/g, "\\'")}', this)" class="p-2 text-slate-400 hover:text-blue-600 hover:bg-slate-50 rounded-xl transition"><i data-lucide="copy" class="w-4 h-4"></i></button>
-              <button onclick="deleteUtility(${u.id})" class="p-2 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+              <button onclick="copyToClipboard('${descStr.replace(/'/g, "\\'")}', this)" class="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:text-blue-600 hover:bg-slate-50 transition"><i data-lucide="copy" class="w-4 h-4"></i></button>
+              <button onclick="deleteUtility(${u.id})" class="w-8 h-8 rounded-full flex items-center justify-center text-slate-300 hover:text-rose-500 hover:bg-rose-50 transition"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
             </div>
           </div>
         `;
