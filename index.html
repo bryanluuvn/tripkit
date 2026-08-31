@@ -970,6 +970,9 @@
     let pushDebounceTimer = null;
     let isSyncing = false;      // đang có 1 lượt push/pull chạy dở
     let isApplyingRemoteData = false;
+    let dirtyVersion = 0;       // tăng mỗi lần có thay đổi cục bộ — dùng để phát
+                                 // hiện thay đổi MỚI xảy ra trong lúc 1 lượt đẩy
+                                 // (cũ) đang chạy dở (xem runAutoPush bên dưới).
     const DIRTY_KEY = 'TRAVEL_SYNC_DIRTY';
 
     // isDirty lưu vào localStorage (không chỉ biến JS) để SỐNG SÓT qua việc
@@ -992,6 +995,7 @@
       // đổi/xoá không bao giờ được đồng bộ. Đổi thứ tự + bọc try/catch để
       // render() có lỗi cũng không làm hỏng luồng lưu/đồng bộ nữa.
       if (!isApplyingRemoteData) {
+        dirtyVersion++;
         setDirty(true);
         scheduleAutoPush();
       }
@@ -1011,11 +1015,24 @@
     async function runAutoPush() {
       if (!appState.backendUrl) return;
       if (isSyncing) { pushDebounceTimer = setTimeout(runAutoPush, 1200); return; }
+      // Chốt lại "phiên bản" thay đổi NGAY LÚC bắt đầu đẩy — payload gửi đi
+      // phản ánh đúng dữ liệu tại thời điểm này.
+      const versionAtStart = dirtyVersion;
       isSyncing = true;
       const result = await doPush(appState.backendUrl, { silent: true });
       isSyncing = false;
       if (result.success) {
-        setDirty(false);
+        if (dirtyVersion === versionAtStart) {
+          // Không có sửa đổi nào khác xảy ra trong lúc đang đẩy -> an toàn để đánh dấu sạch.
+          setDirty(false);
+        } else {
+          // Có sửa đổi MỚI xảy ra trong lúc lượt đẩy (cũ) còn đang chạy dở —
+          // ví dụ bạn gõ thêm ghi chú ngay khi app vừa bắt đầu đẩy lượt tick
+          // trước đó. Lượt đẩy vừa xong CHƯA hề chứa thay đổi mới này, nên
+          // KHÔNG được đánh dấu sạch (nếu không, 1 lượt tải về sau đó sẽ ghi
+          // đè mất thay đổi mới) — vẫn giữ dirty=true và đẩy lại ngay.
+          pushDebounceTimer = setTimeout(runAutoPush, 300);
+        }
       } else {
         // Đẩy thất bại (mất mạng...) — thử lại sau, GIỮ dirty=true để chặn pull ghi đè
         pushDebounceTimer = setTimeout(runAutoPush, 5000);
@@ -1845,11 +1862,13 @@
       const url = (appState.backendUrl || '').trim();
       if (!url) return showToast('Chưa cấu hình backend!', 'error');
       if (!appState.sheetViewUrl) fetchSheetMeta(url);
+      const versionAtStart = dirtyVersion;
       isSyncing = true;
       const result = await doPush(url, { silent: false });
       isSyncing = false;
       if (result.success) {
-        setDirty(false);
+        if (dirtyVersion === versionAtStart) setDirty(false);
+        else scheduleAutoPush(); // có sửa đổi mới trong lúc đang đẩy — đẩy lại ngay cho chắc
         showToast('Đã đẩy dữ liệu lên Google Sheets thành công!', 'success');
       } else if (!result.conflict) {
         // Xung đột đã được doPush() tự xử lý (hiện modal xác nhận riêng) — không báo trùng ở đây.
