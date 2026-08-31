@@ -940,6 +940,13 @@
     if (!appState.utilSort) appState.utilSort = 'NEWEST';
     if (!appState.todoCategoryFilter) appState.todoCategoryFilter = 'ALL';
     if (!appState.todoSort) appState.todoSort = 'DEADLINE';
+    // Máy đã lỡ lưu mặc định CŨ ('NEWEST', từ lúc tính năng deadline chưa có) —
+    // ép chuyển 1 LẦN DUY NHẤT sang mặc định mới 'DEADLINE'. Có cờ đánh dấu nên
+    // sau lần này, nếu bạn tự đổi lại sang tuỳ chọn khác, code sẽ không ghi đè nữa.
+    if (!appState._todoSortMigratedV1) {
+      appState.todoSort = 'DEADLINE';
+      appState._todoSortMigratedV1 = true;
+    }
     // Giấy tờ tạo trước khi có tính năng danh mục — gán mặc định "Khác" để không rỗng.
     // Trip tạo trước khi có tab Việc cần làm — đảm bảo có mảng todos.
     appState.trips.forEach(t => {
