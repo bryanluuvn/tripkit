@@ -297,6 +297,7 @@
         <div class="flex items-center gap-2">
           <div class="flex-1 flex gap-1.5 overflow-x-auto no-scrollbar" id="todo-filter-chips"></div>
           <select id="todo-sort" onchange="setTodoSort(this.value)" class="bg-white border border-slate-200/80 rounded-2xl px-2.5 py-2 text-[10px] font-bold text-slate-600 outline-none shrink-0">
+            <option value="DEADLINE">Hạn chót gần nhất</option>
             <option value="NEWEST">Mới nhất</option>
             <option value="OLDEST">Cũ nhất</option>
             <option value="NAME">Tên A-Z</option>
@@ -499,6 +500,14 @@
             <option value="OTHER">📋 Khác</option>
           </select>
         </div>
+        <div>
+          <label class="text-[11px] font-bold text-slate-500 block mb-1">Hạn chót (không bắt buộc)</label>
+          <input type="date" id="edit-todo-deadline" class="w-full bg-slate-50 border border-slate-200/80 rounded-2xl p-3 text-xs font-semibold outline-none focus:bg-white focus:border-blue-500">
+        </div>
+        <div>
+          <label class="text-[11px] font-bold text-slate-500 block mb-1">Ghi chú</label>
+          <input type="text" id="edit-todo-note" placeholder="VD: Nhớ mang hộ chiếu khi đi đổi tiền" class="w-full bg-slate-50 border border-slate-200/80 rounded-2xl p-3 text-xs font-medium outline-none focus:bg-white focus:border-blue-500">
+        </div>
       </div>
       <button onclick="saveTodoEdit()" class="w-full bg-blue-600 text-[#fff] py-3.5 rounded-2xl font-bold text-xs shadow-md shadow-blue-500/20">Cập nhật</button>
     </div>
@@ -677,6 +686,12 @@
       const arr = [...list];
       if (sort === 'NAME') arr.sort((a, b) => nameGetter(a).localeCompare(nameGetter(b)));
       else if (sort === 'CATEGORY') arr.sort((a, b) => String(a.category || '').localeCompare(String(b.category || '')));
+      else if (sort === 'DEADLINE') arr.sort((a, b) => {
+        if (!a.deadline && !b.deadline) return b.id - a.id; // không hạn nào cả -> mới nhất trước, trong nhóm "không hạn"
+        if (!a.deadline) return 1;  // không có hạn -> luôn xuống cuối
+        if (!b.deadline) return -1;
+        return a.deadline.localeCompare(b.deadline); // hạn gần nhất trước
+      });
       else if (sort === 'OLDEST') arr.sort((a, b) => a.id - b.id);
       else arr.sort((a, b) => b.id - a.id); // NEWEST (mặc định)
       return arr;
@@ -716,7 +731,7 @@
       const input = document.getElementById('todo-title');
       const title = input.value.trim();
       if (!title) return showToast('Vui lòng nhập tên việc cần làm!', 'error');
-      trip.todos.push({ id: genId(), title, category: quickTodoCategory, done: false });
+      trip.todos.push({ id: genId(), title, category: quickTodoCategory, done: false, deadline: '', note: '' });
       input.value = '';
       input.focus(); // gõ liên tục nhiều việc mà không cần chạm lại vào ô nhập
       saveState();
@@ -741,6 +756,8 @@
       document.getElementById('edit-todo-id').value = t.id;
       document.getElementById('edit-todo-title').value = t.title;
       document.getElementById('edit-todo-category').value = t.category;
+      document.getElementById('edit-todo-deadline').value = t.deadline || '';
+      document.getElementById('edit-todo-note').value = t.note || '';
       document.getElementById('edit-todo-modal').classList.remove('hidden');
     }
     function closeEditTodoModal() { document.getElementById('edit-todo-modal').classList.add('hidden'); }
@@ -751,9 +768,26 @@
       if (t) {
         t.title = document.getElementById('edit-todo-title').value.trim() || t.title;
         t.category = document.getElementById('edit-todo-category').value;
+        t.deadline = document.getElementById('edit-todo-deadline').value;
+        t.note = document.getElementById('edit-todo-note').value.trim();
         saveState();
       }
       closeEditTodoModal();
+    }
+
+    // Màu viền + nhãn hạn chót — tự tính theo khoảng cách tới hôm nay, không cần
+    // chọn "ưu tiên" tay: quá hạn = đỏ, hôm nay/sắp tới = cam, còn xa = xanh dương,
+    // không đặt hạn = xám trung tính. Việc đã xong luôn xám (đỡ rối mắt).
+    function getTodoUrgency(t) {
+      if (t.done || !t.deadline) return { border: 'border-l-slate-200', badge: null };
+      const today = new Date(); today.setHours(0, 0, 0, 0);
+      const dl = new Date(t.deadline); dl.setHours(0, 0, 0, 0);
+      const diffDays = Math.round((dl - today) / 86400000);
+      const dateLabel = `${dl.getDate()}/${dl.getMonth() + 1}`;
+      if (diffDays < 0) return { border: 'border-l-rose-500', badge: `Quá hạn ${Math.abs(diffDays)}n`, badgeClass: 'text-rose-600 bg-rose-50 border-rose-100' };
+      if (diffDays === 0) return { border: 'border-l-rose-400', badge: 'Hôm nay', badgeClass: 'text-rose-600 bg-rose-50 border-rose-100' };
+      if (diffDays <= 3) return { border: 'border-l-amber-400', badge: `Còn ${diffDays}n (${dateLabel})`, badgeClass: 'text-amber-600 bg-amber-50 border-amber-100' };
+      return { border: 'border-l-blue-300', badge: dateLabel, badgeClass: 'text-blue-600 bg-blue-50 border-blue-100' };
     }
 
     function openEditDocModal(id) {
@@ -872,7 +906,7 @@
       utilCategoryFilter: 'ALL',
       utilSort: 'NEWEST',
       todoCategoryFilter: 'ALL',
-      todoSort: 'NEWEST',
+      todoSort: 'DEADLINE',
       trips: [
         {
           id: 1,
@@ -905,12 +939,16 @@
     if (!appState.utilCategoryFilter) appState.utilCategoryFilter = 'ALL';
     if (!appState.utilSort) appState.utilSort = 'NEWEST';
     if (!appState.todoCategoryFilter) appState.todoCategoryFilter = 'ALL';
-    if (!appState.todoSort) appState.todoSort = 'NEWEST';
+    if (!appState.todoSort) appState.todoSort = 'DEADLINE';
     // Giấy tờ tạo trước khi có tính năng danh mục — gán mặc định "Khác" để không rỗng.
     // Trip tạo trước khi có tab Việc cần làm — đảm bảo có mảng todos.
     appState.trips.forEach(t => {
       (t.documents || []).forEach(d => { if (!d.category) d.category = 'OTHER'; });
       if (!t.todos) t.todos = [];
+      t.todos.forEach(td => {
+        if (td.deadline === undefined) td.deadline = '';
+        if (td.note === undefined) td.note = '';
+      });
     });
 
     function getCurrentTrip() {
@@ -2130,16 +2168,21 @@
           todoListEl.innerHTML += `<p class="text-[10px] font-bold text-slate-300 uppercase tracking-wide pt-1 pb-0.5">Đã xong (${done.length})</p>`;
         }
         const cat = TODO_CATEGORIES[t.category] || TODO_CATEGORIES.OTHER;
+        const urgency = getTodoUrgency(t);
         todoListEl.innerHTML += `
-          <div class="bg-white rounded-3xl p-4 border border-slate-200/60 shadow-sm flex items-center gap-3 ${t.done ? 'opacity-50' : ''}">
+          <div class="bg-white rounded-3xl p-4 pl-3.5 border border-slate-200/60 border-l-4 ${urgency.border} shadow-sm flex items-center gap-3 ${t.done ? 'opacity-50' : ''}">
             <button onclick="toggleTodoStatus(${t.id})" class="w-9 h-9 rounded-full border flex items-center justify-center shrink-0 transition ${
               t.done ? 'bg-emerald-50 border-emerald-300 text-emerald-600' : 'bg-slate-50 border-slate-200 text-slate-300'
             }">
               <i data-lucide="check" class="w-4 h-4 ${t.done ? 'opacity-100' : 'opacity-0'}"></i>
             </button>
             <div class="min-w-0 flex-1 space-y-0.5">
-              <span class="text-[9px] font-bold text-slate-500">${cat.emoji} ${cat.label}</span>
+              <div class="flex items-center gap-1.5 flex-wrap">
+                <span class="text-[9px] font-bold text-slate-500">${cat.emoji} ${cat.label}</span>
+                ${urgency.badge ? `<span class="text-[9px] font-bold px-1.5 py-0.5 rounded-md border ${urgency.badgeClass}">⏰ ${urgency.badge}</span>` : ''}
+              </div>
               <h4 class="text-xs font-extrabold text-[var(--tk-text)] truncate ${t.done ? 'line-through text-slate-400' : ''}">${t.title}</h4>
+              ${t.note ? `<p class="text-[10px] italic text-slate-400 font-semibold pt-0.5">💡 ${t.note}</p>` : ''}
             </div>
             <div class="flex items-center gap-1 shrink-0">
               <button onclick="openEditTodoModal(${t.id})" class="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:text-blue-600 hover:bg-slate-50 transition"><i data-lucide="edit-2" class="w-4 h-4"></i></button>
