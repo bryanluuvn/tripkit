@@ -38,29 +38,29 @@
   </script>
   <script src="https://unpkg.com/lucide@latest"></script>
   <style>
-    :root { --tk-text: #171922; }
+    :root { --tk-text: #171922; --tk-bg: #F3F4F8; --tk-perf-line: #E3E6EE; --tk-glow-op: 0.09; }
     .no-scrollbar::-webkit-scrollbar { display: none; }
     .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-    body { font-family: 'Inter', sans-serif; position: relative; overflow-x: hidden; }
-    /* Quầng sáng mờ phía trên, cùng tinh thần với PackPass (light mode: mờ hơn) */
+    body { font-family: 'Inter', sans-serif; position: relative; overflow-x: hidden; background: var(--tk-bg); }
+    /* Quầng sáng mờ phía trên, cùng tinh thần với PackPass (mờ hơn ở light mode) */
     body::before {
       content: ''; position: fixed; top: -140px; left: 50%; transform: translateX(-50%);
       width: 520px; height: 340px; border-radius: 50%;
       background: radial-gradient(circle, #FF7A45 0%, transparent 70%);
-      opacity: 0.09; filter: blur(50px); pointer-events: none; z-index: 0;
+      opacity: var(--tk-glow-op); filter: blur(50px); pointer-events: none; z-index: 0;
     }
     .max-w-md.mx-auto { position: relative; z-index: 1; }
     /* Đường xé vé đục lỗ — dùng làm gạch nối giữa các khối trong 1 thẻ, giống PackPass */
-    .tk-perf { position: relative; height: 0; border-top: 1.5px dashed #E3E6EE; }
+    .tk-perf { position: relative; height: 0; border-top: 1.5px dashed var(--tk-perf-line); }
     .tk-perf::before, .tk-perf::after {
       content: ''; position: absolute; top: -9px; width: 18px; height: 18px;
-      border-radius: 50%; background: #F3F4F8; border: 1px solid #E3E6EE;
+      border-radius: 50%; background: var(--tk-bg); border: 1px solid var(--tk-perf-line);
     }
     .tk-perf::before { left: -9px; }
     .tk-perf::after { right: -9px; }
   </style>
 </head>
-<body class="bg-[#F3F4F8] text-slate-800 min-h-screen pb-24 antialiased selection:bg-blue-500 selection:text-[#fff]">
+<body class="text-slate-800 min-h-screen pb-24 antialiased selection:bg-blue-500 selection:text-[#fff]">
 
   <div class="max-w-md mx-auto min-h-screen flex flex-col justify-between">
     
@@ -201,7 +201,7 @@
       <!-- ================= VIEW 2: DOCUMENTS ================= -->
       <section id="view-documents" class="space-y-4 hidden">
         <div class="bg-white rounded-3xl p-5 border border-slate-200/60 shadow-sm space-y-3.5">
-          <h2 class="text-base font-extrabold text-[var(--tk-text)]">Ví Giấy tờ & File</h2>
+          <h2 class="font-serif text-lg font-semibold text-[var(--tk-text)]">Ví Giấy tờ & File</h2>
           
           <div class="space-y-2.5">
             <div class="grid grid-cols-2 gap-2">
@@ -237,7 +237,7 @@
       <!-- ================= VIEW 3: UTILITIES ================= -->
       <section id="view-utilities" class="space-y-4 hidden">
         <div class="bg-white rounded-3xl p-5 border border-slate-200/60 shadow-sm space-y-3.5">
-          <h2 class="text-base font-extrabold text-[var(--tk-text)]">Bộ tiện ích chuyến đi</h2>
+          <h2 class="font-serif text-lg font-semibold text-[var(--tk-text)]">Bộ tiện ích chuyến đi</h2>
           
           <div class="space-y-2.5">
             <div class="grid grid-cols-2 gap-2">
@@ -269,6 +269,43 @@
         <div id="utilities-list" class="space-y-3"></div>
       </section>
 
+      <!-- ================= VIEW 4: TODO ================= -->
+      <section id="view-todo" class="space-y-4 hidden">
+        <div class="bg-white rounded-3xl p-5 border border-slate-200/60 shadow-sm space-y-3.5">
+          <h2 class="font-serif text-lg font-semibold text-[var(--tk-text)]">Việc cần làm</h2>
+          <p class="text-[11px] text-slate-400 font-medium -mt-2">Đặt vé, đặt phòng, đổi tiền... — không phải hoạt động theo giờ trong Lịch trình.</p>
+
+          <div class="flex items-center gap-2">
+            <div class="relative shrink-0">
+              <button type="button" onclick="toggleTodoCategoryPopup()" id="todo-cat-btn" class="w-11 h-11 bg-slate-50 border border-slate-200/80 rounded-2xl flex items-center justify-center text-lg leading-none">📋</button>
+              <div id="todo-cat-popup" class="hidden absolute top-full mt-2 left-0 bg-white rounded-2xl shadow-xl border border-slate-100 p-1.5 z-20 w-44">
+                <button type="button" onclick="pickTodoCategory('BOOKING')" class="w-full flex items-center gap-2 px-2.5 py-2 rounded-xl hover:bg-slate-50 text-xs font-semibold text-left transition">🏨 Đặt chỗ</button>
+                <button type="button" onclick="pickTodoCategory('TICKET')" class="w-full flex items-center gap-2 px-2.5 py-2 rounded-xl hover:bg-slate-50 text-xs font-semibold text-left transition">🎫 Vé</button>
+                <button type="button" onclick="pickTodoCategory('MONEY')" class="w-full flex items-center gap-2 px-2.5 py-2 rounded-xl hover:bg-slate-50 text-xs font-semibold text-left transition">💰 Tài chính</button>
+                <button type="button" onclick="pickTodoCategory('OTHER')" class="w-full flex items-center gap-2 px-2.5 py-2 rounded-xl hover:bg-slate-50 text-xs font-semibold text-left transition">📋 Khác</button>
+              </div>
+            </div>
+            <input type="text" id="todo-title" onkeydown="if(event.key==='Enter') addTodo()" placeholder="Việc cần làm (VD: Đặt vé máy bay)" class="flex-1 bg-slate-50/80 border border-slate-200/80 rounded-2xl px-3.5 py-3 text-xs font-medium outline-none focus:bg-white focus:border-blue-500">
+            <button onclick="addTodo()" class="w-11 h-11 shrink-0 bg-slate-900 hover:bg-black text-[#fff] rounded-2xl flex items-center justify-center shadow-sm transition active:scale-90">
+              <i data-lucide="plus" class="w-5 h-5"></i>
+            </button>
+          </div>
+          <p class="text-[10px] text-slate-400 -mt-1.5">Gõ xong bấm Enter — bấm icon danh mục bên trái để đổi nếu cần.</p>
+        </div>
+
+        <!-- Filter + Sắp xếp -->
+        <div class="flex items-center gap-2">
+          <div class="flex-1 flex gap-1.5 overflow-x-auto no-scrollbar" id="todo-filter-chips"></div>
+          <select id="todo-sort" onchange="setTodoSort(this.value)" class="bg-white border border-slate-200/80 rounded-2xl px-2.5 py-2 text-[10px] font-bold text-slate-600 outline-none shrink-0">
+            <option value="NEWEST">Mới nhất</option>
+            <option value="OLDEST">Cũ nhất</option>
+            <option value="NAME">Tên A-Z</option>
+            <option value="CATEGORY">Danh mục</option>
+          </select>
+        </div>
+
+        <div id="todo-list" class="space-y-3"></div>
+      </section>
 
     </main>
 
@@ -276,11 +313,16 @@
     <div id="toast-container" class="fixed bottom-24 left-0 right-0 flex flex-col items-center gap-2 z-[60] pointer-events-none px-4"></div>
 
     <!-- BOTTOM NAVIGATION BAR -->
-    <nav class="fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-xl border-t border-slate-200/60 px-6 py-3 z-40" style="transform: translateZ(0); -webkit-transform: translateZ(0); will-change: transform;">
+    <nav class="fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-xl border-t border-slate-200/60 px-4 py-3 z-40" style="transform: translateZ(0); -webkit-transform: translateZ(0); will-change: transform;">
       <div class="max-w-md mx-auto flex justify-around items-center">
         <button onclick="switchTab('itinerary')" id="nav-itinerary" class="flex flex-col items-center gap-1 text-blue-600 font-extrabold">
           <i data-lucide="map-pin" class="w-5 h-5"></i>
           <span class="text-[11px]">Lịch trình</span>
+        </button>
+
+        <button onclick="switchTab('todo')" id="nav-todo" class="flex flex-col items-center gap-1 text-slate-400 font-semibold hover:text-slate-600">
+          <i data-lucide="list-checks" class="w-5 h-5"></i>
+          <span class="text-[11px]">Việc cần làm</span>
         </button>
 
         <button onclick="switchTab('documents')" id="nav-documents" class="flex flex-col items-center gap-1 text-slate-400 font-semibold hover:text-slate-600">
@@ -371,6 +413,10 @@
         <h3 class="text-sm font-extrabold text-[var(--tk-text)] flex items-center gap-2"><i data-lucide="list-todo" class="w-4 h-4 text-blue-500"></i> Toàn bộ lịch trình</h3>
         <button onclick="closeOverviewModal()" class="p-1 text-slate-400 hover:text-slate-600"><i data-lucide="x" class="w-5 h-5"></i></button>
       </div>
+      <div class="relative shrink-0">
+        <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2"></i>
+        <input type="text" id="overview-search" oninput="filterOverview()" placeholder="Tìm hoạt động, địa điểm..." class="w-full bg-slate-50 border border-slate-200/80 rounded-2xl pl-10 pr-3.5 py-2.5 text-xs font-medium outline-none focus:bg-white focus:border-blue-500">
+      </div>
       <div id="overview-content" class="space-y-4 overflow-y-auto"></div>
     </div>
   </div>
@@ -428,6 +474,33 @@
         </div>
       </div>
       <button onclick="saveActivityEdit()" class="w-full bg-blue-600 text-[#fff] py-3.5 rounded-2xl font-bold text-xs shadow-md shadow-blue-500/20">Cập nhật</button>
+    </div>
+  </div>
+
+  <!-- MODAL EDIT TODO -->
+  <div id="edit-todo-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4" onclick="if(event.target===this) closeEditTodoModal()">
+    <div class="max-w-sm w-full bg-white rounded-3xl p-5 space-y-4 shadow-2xl border border-slate-100">
+      <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+        <h3 class="text-sm font-extrabold text-[var(--tk-text)]">Sửa việc cần làm</h3>
+        <button onclick="closeEditTodoModal()" class="p-1 text-slate-400 hover:text-slate-600"><i data-lucide="x" class="w-5 h-5"></i></button>
+      </div>
+      <input type="hidden" id="edit-todo-id">
+      <div class="space-y-3">
+        <div>
+          <label class="text-[11px] font-bold text-slate-500 block mb-1">Tên việc cần làm</label>
+          <input type="text" id="edit-todo-title" class="w-full bg-slate-50 border border-slate-200/80 rounded-2xl p-3 text-xs font-medium outline-none focus:bg-white focus:border-blue-500">
+        </div>
+        <div>
+          <label class="text-[11px] font-bold text-slate-500 block mb-1">Danh mục</label>
+          <select id="edit-todo-category" class="w-full bg-slate-50 border border-slate-200/80 rounded-2xl p-3 text-xs font-semibold outline-none focus:bg-white focus:border-blue-500">
+            <option value="BOOKING">🏨 Đặt chỗ</option>
+            <option value="TICKET">🎫 Vé</option>
+            <option value="MONEY">💰 Tài chính</option>
+            <option value="OTHER">📋 Khác</option>
+          </select>
+        </div>
+      </div>
+      <button onclick="saveTodoEdit()" class="w-full bg-blue-600 text-[#fff] py-3.5 rounded-2xl font-bold text-xs shadow-md shadow-blue-500/20">Cập nhật</button>
     </div>
   </div>
 
@@ -592,6 +665,12 @@
       PHONE: { emoji: '📞', label: 'SĐT' },
       LINK: { emoji: '🌐', label: 'Link' }
     };
+    const TODO_CATEGORIES = {
+      BOOKING: { emoji: '🏨', label: 'Đặt chỗ' },
+      TICKET: { emoji: '🎫', label: 'Vé' },
+      MONEY: { emoji: '💰', label: 'Tài chính' },
+      OTHER: { emoji: '📋', label: 'Khác' }
+    };
 
     // sort: NEWEST/OLDEST dựa vào id (tạo bằng genId()/Date.now() nên tăng dần theo thời gian tạo)
     function sortItems(list, sort, nameGetter) {
@@ -610,6 +689,72 @@
     function setDocSort(sort) { appState.docSort = sort; persistLocalOnly(); render(); }
     function setUtilFilter(cat) { appState.utilCategoryFilter = cat; persistLocalOnly(); render(); }
     function setUtilSort(sort) { appState.utilSort = sort; persistLocalOnly(); render(); }
+    function setTodoFilter(cat) { appState.todoCategoryFilter = cat; persistLocalOnly(); render(); }
+    function setTodoSort(sort) { appState.todoSort = sort; persistLocalOnly(); render(); }
+
+    /* VIỆC CẦN LÀM (trước & trong chuyến đi) */
+    let quickTodoCategory = 'OTHER'; // danh mục nhanh đang chọn cho lần thêm tiếp theo — giữ nguyên qua nhiều lần thêm liên tiếp
+    function toggleTodoCategoryPopup() {
+      document.getElementById('todo-cat-popup').classList.toggle('hidden');
+    }
+    function pickTodoCategory(cat) {
+      quickTodoCategory = cat;
+      const btn = document.getElementById('todo-cat-btn');
+      if (btn) btn.innerText = (TODO_CATEGORIES[cat] || TODO_CATEGORIES.OTHER).emoji;
+      document.getElementById('todo-cat-popup').classList.add('hidden');
+    }
+    // Bấm ra ngoài popup danh mục thì tự đóng lại
+    document.addEventListener('click', (e) => {
+      const popup = document.getElementById('todo-cat-popup');
+      const btn = document.getElementById('todo-cat-btn');
+      if (!popup || popup.classList.contains('hidden')) return;
+      if (!popup.contains(e.target) && e.target !== btn) popup.classList.add('hidden');
+    });
+
+    function addTodo() {
+      const trip = getCurrentTrip();
+      const input = document.getElementById('todo-title');
+      const title = input.value.trim();
+      if (!title) return showToast('Vui lòng nhập tên việc cần làm!', 'error');
+      trip.todos.push({ id: genId(), title, category: quickTodoCategory, done: false });
+      input.value = '';
+      input.focus(); // gõ liên tục nhiều việc mà không cần chạm lại vào ô nhập
+      saveState();
+    }
+    function toggleTodoStatus(id) {
+      const trip = getCurrentTrip();
+      const t = trip.todos.find(x => x.id === id);
+      if (t) { t.done = !t.done; saveState(); }
+    }
+    function deleteTodo(id) {
+      const trip = getCurrentTrip();
+      const t = trip.todos.find(x => x.id === id);
+      showConfirm(`Xoá việc "${t ? t.title : ''}"?`, () => {
+        trip.todos = trip.todos.filter(x => x.id !== id);
+        saveState();
+      });
+    }
+    function openEditTodoModal(id) {
+      const trip = getCurrentTrip();
+      const t = trip.todos.find(x => x.id === id);
+      if (!t) return;
+      document.getElementById('edit-todo-id').value = t.id;
+      document.getElementById('edit-todo-title').value = t.title;
+      document.getElementById('edit-todo-category').value = t.category;
+      document.getElementById('edit-todo-modal').classList.remove('hidden');
+    }
+    function closeEditTodoModal() { document.getElementById('edit-todo-modal').classList.add('hidden'); }
+    function saveTodoEdit() {
+      const trip = getCurrentTrip();
+      const id = Number(document.getElementById('edit-todo-id').value);
+      const t = trip.todos.find(x => x.id === id);
+      if (t) {
+        t.title = document.getElementById('edit-todo-title').value.trim() || t.title;
+        t.category = document.getElementById('edit-todo-category').value;
+        saveState();
+      }
+      closeEditTodoModal();
+    }
 
     function openEditDocModal(id) {
       const trip = getCurrentTrip();
@@ -726,6 +871,8 @@
       docSort: 'NEWEST',
       utilCategoryFilter: 'ALL',
       utilSort: 'NEWEST',
+      todoCategoryFilter: 'ALL',
+      todoSort: 'NEWEST',
       trips: [
         {
           id: 1,
@@ -740,7 +887,8 @@
             { id: 2, day: 3, time: '14:00', title: 'Check-in Hội An', location: 'Phố cổ Hội An', note: 'Tham quan đèn lồng', category: 'ACTIVITY', priority: 'MUST', status: 'PENDING' }
           ],
           documents: [],
-          utilities: []
+          utilities: [],
+          todos: []
         }
       ]
     };
@@ -756,9 +904,13 @@
     if (!appState.docSort) appState.docSort = 'NEWEST';
     if (!appState.utilCategoryFilter) appState.utilCategoryFilter = 'ALL';
     if (!appState.utilSort) appState.utilSort = 'NEWEST';
+    if (!appState.todoCategoryFilter) appState.todoCategoryFilter = 'ALL';
+    if (!appState.todoSort) appState.todoSort = 'NEWEST';
     // Giấy tờ tạo trước khi có tính năng danh mục — gán mặc định "Khác" để không rỗng.
+    // Trip tạo trước khi có tab Việc cần làm — đảm bảo có mảng todos.
     appState.trips.forEach(t => {
       (t.documents || []).forEach(d => { if (!d.category) d.category = 'OTHER'; });
+      if (!t.todos) t.todos = [];
     });
 
     function getCurrentTrip() {
@@ -908,7 +1060,8 @@
         priorityFilter: 'ALL',
         activities: [],
         documents: [],
-        utilities: []
+        utilities: [],
+        todos: []
       };
 
       appState.trips.push(newTrip);
@@ -935,7 +1088,7 @@
 
     /* NAVIGATION */
     function switchTab(tab) {
-      ['itinerary', 'documents', 'utilities'].forEach(t => {
+      ['itinerary', 'todo', 'documents', 'utilities'].forEach(t => {
         document.getElementById(`view-${t}`).classList.add('hidden');
         document.getElementById(`nav-${t}`).className = 'flex flex-col items-center gap-1 text-slate-400 font-semibold hover:text-slate-600 transition';
       });
@@ -1152,15 +1305,15 @@
 
       const content = document.getElementById('overview-content');
       content.innerHTML = groups.map(g => `
-        <div>
+        <div class="overview-group" data-day-label="${g.label.toLowerCase()}">
           <div class="flex items-center justify-between mb-1.5 sticky top-0 bg-white py-1">
             <h4 class="text-xs font-extrabold text-[var(--tk-text)]">${g.label} ${g.dateStr ? `<span class="text-slate-400 font-medium">(${g.dateStr})</span>` : ''}</h4>
             <button onclick="jumpToDayFromOverview(${g.day})" class="text-[10px] font-bold text-blue-500 hover:underline">Đi tới →</button>
           </div>
           ${g.acts.length === 0
-            ? '<p class="text-[11px] text-slate-300 italic pl-1">Chưa có hoạt động</p>'
+            ? '<p class="text-[11px] text-slate-300 italic pl-1 overview-empty">Chưa có hoạt động</p>'
             : g.acts.map(a => `
-                <div class="flex items-center gap-2 py-1.5 pl-1 border-b border-slate-50 last:border-0">
+                <div class="overview-row flex items-center gap-2 py-1.5 pl-1 border-b border-slate-50 last:border-0" data-search="${(a.title + ' ' + (a.location || '') + ' ' + (a.note || '')).toLowerCase()}">
                   <span class="text-[11px] font-bold text-blue-600 w-10 shrink-0">${a.time}</span>
                   <span class="text-[10px] shrink-0">${getCategoryIcon(a.category).emoji}</span>
                   <span class="text-xs font-semibold text-slate-700 truncate ${a.status === 'COMPLETED' ? 'line-through text-slate-300' : ''}">${a.title}</span>
@@ -1170,12 +1323,31 @@
         </div>
       `).join('');
 
+      document.getElementById('overview-search').value = '';
       document.getElementById('overview-modal').classList.remove('hidden');
     }
     function closeOverviewModal() { document.getElementById('overview-modal').classList.add('hidden'); }
     function jumpToDayFromOverview(day) {
       setDay(day);
       closeOverviewModal();
+    }
+
+    // Tìm hoạt động theo tên/địa điểm/ghi chú trên TOÀN BỘ trip (mọi ngày) —
+    // ẩn dòng không khớp, và ẩn luôn cả nhóm ngày nếu không còn dòng nào khớp.
+    function filterOverview() {
+      const q = document.getElementById('overview-search').value.trim().toLowerCase();
+      document.querySelectorAll('.overview-group').forEach(group => {
+        let visibleCount = 0;
+        group.querySelectorAll('.overview-row').forEach(row => {
+          const match = !q || row.dataset.search.includes(q);
+          row.classList.toggle('hidden', !match);
+          if (match) visibleCount++;
+        });
+        const hasEmptyState = !!group.querySelector('.overview-empty');
+        // Khi đang tìm kiếm: ẩn hẳn nhóm ngày không có kết quả khớp (kể cả ngày trống sẵn).
+        // Khi ô tìm kiếm rỗng: luôn hiện đủ mọi nhóm như bình thường.
+        group.classList.toggle('hidden', !!q && visibleCount === 0);
+      });
     }
 
     /* MAP GENERATION */
@@ -1738,17 +1910,20 @@
         </button>
       `;
 
+      const todayStr = new Date().toDateString();
       for (let i = 1; i <= trip.totalDays; i++) {
         const isActive = trip.currentDay === i;
         const curDate = new Date(start);
         curDate.setDate(start.getDate() + (i - 1));
         const dateFormatted = `${curDate.getDate()}/${curDate.getMonth() + 1}`;
         const locName = trip.dayLocations[i] ? ` • ${trip.dayLocations[i]}` : '';
+        const isToday = curDate.toDateString() === todayStr;
 
         dayContainer.innerHTML += `
-          <button onclick="setDay(${i})" class="px-3.5 py-2 rounded-full text-xs font-bold transition flex items-center gap-2 shrink-0 active:scale-95 border ${
+          <button onclick="setDay(${i})" class="relative px-3.5 py-2 rounded-full text-xs font-bold transition flex items-center gap-2 shrink-0 active:scale-95 border ${
             isActive ? 'bg-blue-500 border-blue-500 text-[#fff] shadow-md shadow-blue-500/20' : 'bg-white border-slate-200/80 text-slate-500 hover:border-blue-500'
           }">
+            ${isToday ? `<span class="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-emerald-400 border-2 border-white" title="Hôm nay"></span>` : ''}
             <span class="w-1.5 h-1.5 rounded-full shrink-0 ${isActive ? 'bg-[#fff]' : 'bg-slate-300'}"></span>
             <span>Ngày ${i}${locName}</span>
             <span class="text-[10px] opacity-75 font-normal">(${dateFormatted})</span>
@@ -1922,8 +2097,76 @@
         `;
       });
 
+      // Việc cần làm — filter chip theo danh mục, có nút check hoàn thành
+      if (!trip.todos) trip.todos = [];
+      const todoFilterContainer = document.getElementById('todo-filter-chips');
+      const todoCatCounts = { ALL: trip.todos.length };
+      Object.keys(TODO_CATEGORIES).forEach(k => { todoCatCounts[k] = trip.todos.filter(t => t.category === k).length; });
+      todoFilterContainer.innerHTML = ['ALL', ...Object.keys(TODO_CATEGORIES)].map(key => {
+        const isActive = appState.todoCategoryFilter === key;
+        const label = key === 'ALL' ? 'Tất cả' : `${TODO_CATEGORIES[key].emoji} ${TODO_CATEGORIES[key].label}`;
+        return `<button onclick="setTodoFilter('${key}')" class="px-3 py-1.5 rounded-full text-[10px] font-bold shrink-0 border transition ${
+          isActive ? 'bg-blue-500 border-blue-500 text-[#fff]' : 'bg-white border-slate-200/80 text-slate-500 hover:border-blue-500'
+        }">${label} (${todoCatCounts[key] || 0})</button>`;
+      }).join('');
+      document.getElementById('todo-sort').value = appState.todoSort;
+
+      let todosToShow = trip.todos.filter(t => appState.todoCategoryFilter === 'ALL' || t.category === appState.todoCategoryFilter);
+      // Việc đã tick xong dồn xuống cuối danh sách — tập trung mắt vào việc còn phải làm.
+      // Vẫn áp đúng kiểu sắp xếp đang chọn bên trong mỗi nhóm (chưa xong / đã xong).
+      const notDone = sortItems(todosToShow.filter(t => !t.done), appState.todoSort, t => t.title);
+      const done = sortItems(todosToShow.filter(t => t.done), appState.todoSort, t => t.title);
+      todosToShow = notDone.concat(done);
+
+      const todoListEl = document.getElementById('todo-list');
+      todoListEl.innerHTML = '';
+      if (todosToShow.length === 0) {
+        todoListEl.innerHTML = `<div class="text-center py-10 bg-white rounded-3xl border border-slate-200/60 text-xs font-bold text-slate-400">${trip.todos.length === 0 ? 'Chưa có việc cần làm nào.' : 'Không có việc nào khớp bộ lọc.'}</div>`;
+      }
+      let doneDividerShown = false;
+      todosToShow.forEach(t => {
+        if (t.done && !doneDividerShown && notDone.length > 0) {
+          doneDividerShown = true;
+          todoListEl.innerHTML += `<p class="text-[10px] font-bold text-slate-300 uppercase tracking-wide pt-1 pb-0.5">Đã xong (${done.length})</p>`;
+        }
+        const cat = TODO_CATEGORIES[t.category] || TODO_CATEGORIES.OTHER;
+        todoListEl.innerHTML += `
+          <div class="bg-white rounded-3xl p-4 border border-slate-200/60 shadow-sm flex items-center gap-3 ${t.done ? 'opacity-50' : ''}">
+            <button onclick="toggleTodoStatus(${t.id})" class="w-9 h-9 rounded-full border flex items-center justify-center shrink-0 transition ${
+              t.done ? 'bg-emerald-50 border-emerald-300 text-emerald-600' : 'bg-slate-50 border-slate-200 text-slate-300'
+            }">
+              <i data-lucide="check" class="w-4 h-4 ${t.done ? 'opacity-100' : 'opacity-0'}"></i>
+            </button>
+            <div class="min-w-0 flex-1 space-y-0.5">
+              <span class="text-[9px] font-bold text-slate-500">${cat.emoji} ${cat.label}</span>
+              <h4 class="text-xs font-extrabold text-[var(--tk-text)] truncate ${t.done ? 'line-through text-slate-400' : ''}">${t.title}</h4>
+            </div>
+            <div class="flex items-center gap-1 shrink-0">
+              <button onclick="openEditTodoModal(${t.id})" class="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:text-blue-600 hover:bg-slate-50 transition"><i data-lucide="edit-2" class="w-4 h-4"></i></button>
+              <button onclick="deleteTodo(${t.id})" class="w-8 h-8 rounded-full flex items-center justify-center text-slate-300 hover:text-rose-500 hover:bg-rose-50 transition"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+            </div>
+          </div>
+        `;
+      });
+
       lucide.createIcons();
     }
+
+    // Tự nhảy tới đúng ngày hôm nay mỗi khi mở app — nếu chuyến đi đang bao
+    // gồm ngày hôm nay. Chỉ chạy 1 lần lúc khởi động, không ép lại giữa phiên
+    // (bạn vẫn tự do xem ngày khác trong lúc dùng app bình thường).
+    (function jumpToTodayOnLoad() {
+      const trip = getCurrentTrip();
+      if (!trip || !trip.startDate) return;
+      const start = new Date(trip.startDate);
+      start.setHours(0, 0, 0, 0);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const diffDays = Math.round((today - start) / 86400000) + 1;
+      if (diffDays >= 1 && diffDays <= trip.totalDays) {
+        trip.currentDay = diffDays;
+      }
+    })();
 
     try { render(); } catch (err) { console.error('Lỗi render() lúc khởi động:', err); }
     fetchWeatherForCurrentDay();
@@ -1944,6 +2187,14 @@
         doPull(appState.backendUrl, { silent: true }).finally(() => { isSyncing = false; });
       }
       if (!appState.sheetViewUrl) fetchSheetMeta(appState.backendUrl);
+    }
+
+    // Đăng ký Service Worker để app vẫn MỞ ĐƯỢC khi không có mạng (cache lại
+    // trang chính) — file sw.js phải nằm CÙNG THƯ MỤC với index.html.
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js').catch(() => {});
+      });
     }
   </script>
 </body>
